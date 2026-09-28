@@ -136,3 +136,12 @@ test("coordinator switches state rules and notes re-check", async ({ page }) => 
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Illinois rules Sessionside enforces")).toBeVisible();
 });
+
+test("service log export includes absences for the IEP system", async ({ page }) => {
+  await login(page, "Maya Chen");
+  const res = await page.request.get("/api/exports?profile=service-log&from=2026-01-01&to=2030-01-01");
+  expect(res.status()).toBe(200);
+  const lines = (await res.text()).trim().split("\n");
+  expect(lines[0]).toBe("Date,Last Name,First Name,Service,Attendance,Minutes,Setting,Group Size,Provider,Goals Addressed,Progress");
+  expect(lines.length).toBeGreaterThan(5);
+});

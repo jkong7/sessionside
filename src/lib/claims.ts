@@ -102,7 +102,7 @@ function toLine(e: Evaluated, rates: Record<string, number>): ClaimLine {
   };
 }
 
-function csvCell(v: string | number | null): string {
+export function csvCell(v: string | number | null): string {
   const s = v == null ? "" : String(v);
   const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
   return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;

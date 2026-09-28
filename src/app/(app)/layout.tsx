@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ? [
           { href: "/minutes", label: "IEP minutes" },
           { href: "/claims", label: "Claims" },
+          { href: "/exports", label: "Exports" },
           { href: "/students", label: "Students" },
           { href: "/settings", label: "District settings" },
         ]
@@ -27,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           { href: "/minutes", label: "IEP minutes" },
           { href: "/progress", label: "Progress reports" },
           { href: "/claims", label: "Claims" },
+          { href: "/exports", label: "Exports" },
           { href: "/students", label: "Caseload" },
           { href: "/digest", label: "Daily digest" },
         ];

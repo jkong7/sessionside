@@ -29,6 +29,7 @@ export type DistrictSettings = {
   state: "IL" | "NY" | "TX" | "MI";
   noteDeadlineDays?: number;
   rates: Record<string, number>;
+  exportProfiles?: { id: string; name: string; description: string; columns: { field: string; header: string }[]; onlySigned: boolean; includeAbsences: boolean }[];
 };
 
 export type Student = {
