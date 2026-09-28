@@ -36,3 +36,10 @@ body { -webkit-font-smoothing: antialiased; }
 @utility btn-ghost { @apply btn border border-line bg-surface text-ink-2 hover:bg-sunken; }
 @utility field { @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-100; }
 @utility chip { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium; }
+
+@media print {
+  aside, nav, .print\:hidden { display: none !important; }
+  body, html { background: white; }
+  main { padding: 0 !important; }
+  .card { border: none; }
+}

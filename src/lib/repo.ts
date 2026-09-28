@@ -184,6 +184,49 @@ export function contextFor(enc: Pick<Encounter, "student_id" | "provider_id" | "
   };
 }
 
+export type ProgressEntry = { goal_id: string; rating: string; narrative: string };
+export type ProgressReportRow = {
+  id: string;
+  student_id: string;
+  provider_id: string;
+  discipline: string;
+  period_start: string;
+  period_end: string;
+  content: ProgressEntry[];
+  status: "draft" | "final";
+  signed_at: string | null;
+  updated_at: string;
+};
+
+function toReport(r: Row): ProgressReportRow {
+  return { ...(r as unknown as ProgressReportRow), content: JSON.parse(String(r.content)) };
+}
+
+export function progressReportsFor(studentId: string): ProgressReportRow[] {
+  return all<Row>("SELECT * FROM progress_reports WHERE student_id = ? ORDER BY period_end DESC", studentId).map(toReport);
+}
+
+export function findProgressReport(studentId: string, discipline: string, from: string, to: string): ProgressReportRow | null {
+  const r = one<Row>("SELECT * FROM progress_reports WHERE student_id = ? AND discipline = ? AND period_start = ? AND period_end = ?", studentId, discipline, from, to);
+  return r ? toReport(r) : null;
+}
+
+export function upsertProgressReport(input: { studentId: string; providerId: string; discipline: string; from: string; to: string; content: ProgressEntry[]; final: boolean }): string {
+  const existing = findProgressReport(input.studentId, input.discipline, input.from, input.to);
+  const ts = now();
+  if (existing) {
+    db()
+      .prepare("UPDATE progress_reports SET content = ?, status = ?, signed_at = ?, provider_id = ?, updated_at = ? WHERE id = ?")
+      .run(JSON.stringify(input.content), input.final ? "final" : "draft", input.final ? ts : null, input.providerId, ts, existing.id);
+    return existing.id;
+  }
+  const id = uid("prg");
+  db()
+    .prepare("INSERT INTO progress_reports (id, student_id, provider_id, discipline, period_start, period_end, content, status, signed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(id, input.studentId, input.providerId, input.discipline, input.from, input.to, JSON.stringify(input.content), input.final ? "final" : "draft", input.final ? ts : null, ts, ts);
+  return id;
+}
+
 export type Addendum = { id: string; encounter_id: string; author_id: string; text: string; created_at: string; author_name: string };
 
 export function addendaFor(encounterId: string): Addendum[] {

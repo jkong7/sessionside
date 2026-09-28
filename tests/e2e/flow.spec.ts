@@ -95,3 +95,20 @@ test("one group dictation becomes a note per student", async ({ page }) => {
   await expect(page.locator("input[name=minutes]")).toHaveValue("30");
   await expect(page.getByText("Code 92508")).toBeVisible();
 });
+
+test("progress report drafts from session data and locks when signed", async ({ page }) => {
+  await login(page, "Maya Chen");
+  await page.goto("/progress");
+  await page.getByRole("link", { name: /Morales, Ava/ }).click();
+  await expect(page.getByRole("heading", { name: /IEP Progress Report/ })).toBeVisible();
+  const narrative = page.locator("textarea[name^=narrative_]").first();
+  await expect(narrative).toHaveValue(/sessions|data/);
+  await page.getByRole("button", { name: "Finalize and sign" }).click();
+  await expect(page.getByText("Check the attestation box")).toBeVisible();
+  await page.getByLabel(/I reviewed this report/).check();
+  await page.getByRole("button", { name: "Finalize and sign" }).click();
+  await expect(page.getByText(/Signed by Maya Chen/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Print or save as PDF" })).toBeVisible();
+  await page.goto("/progress");
+  await expect(page.getByRole("link", { name: /Morales, Ava/ }).getByText("Finalized")).toBeVisible();
+});

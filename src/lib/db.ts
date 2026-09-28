@@ -133,6 +133,24 @@ CREATE TABLE IF NOT EXISTS addenda (
 );
 CREATE TRIGGER IF NOT EXISTS addenda_append_only_u BEFORE UPDATE ON addenda BEGIN SELECT RAISE(ABORT, 'addenda are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS addenda_append_only_d BEFORE DELETE ON addenda BEGIN SELECT RAISE(ABORT, 'addenda are append-only'); END;
+CREATE TABLE IF NOT EXISTS progress_reports (
+  id TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL REFERENCES students(id),
+  provider_id TEXT NOT NULL REFERENCES users(id),
+  discipline TEXT NOT NULL,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  content TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  signed_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (student_id, discipline, period_start, period_end)
+);
+CREATE TRIGGER IF NOT EXISTS progress_reports_final_immutable
+BEFORE UPDATE ON progress_reports
+WHEN OLD.status = 'final'
+BEGIN SELECT RAISE(ABORT, 'final progress reports cannot be changed'); END;
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT,
