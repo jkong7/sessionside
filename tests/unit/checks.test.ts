@@ -160,3 +160,10 @@ describe("state rule packs", () => {
     expect(codes(ctx({ provider: { ...ctx().provider, credential: "M.S." } }))).toContain("CREDENTIAL_NOT_BILLABLE");
   });
 });
+
+describe("attendance cross-check", () => {
+  it("blocks billing when school attendance shows the student absent", () => {
+    expect(codes({ ...ctx(), schoolAttendance: "absent" })).toContain("SCHOOL_ABSENT");
+    expect(codes({ ...ctx(), schoolAttendance: "present" })).not.toContain("SCHOOL_ABSENT");
+  });
+});

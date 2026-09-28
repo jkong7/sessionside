@@ -157,3 +157,18 @@ test("coordinator can export all district data; therapists cannot", async ({ pag
   await login(t, "Maya Chen");
   expect((await t.request.get("/api/district-export")).status()).toBe(403);
 });
+
+test("coordinator previews and imports a roster CSV", async ({ page }) => {
+  await login(page, "Dana Whitfield");
+  await page.goto("/imports");
+  const csv = "student_id,first_name,last_name,dob,school,grade,medicaid_id,iep_start,iep_end\nS900,Test,Student,2018-01-01,Dewey Elementary,2,IL123123123,2026-08-20,2027-08-19\nS901,Bad,Row,not-a-date,Dewey Elementary,2,,2026-08-20,2027-08-19\n";
+  await page.locator("input[type=file]").setInputFiles({ name: "students.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await page.getByRole("button", { name: "Import" }).click();
+  await expect(page.getByText("1 row need fixing. Nothing was imported.")).toBeVisible();
+  await expect(page.getByText(/Row 3: dob must be YYYY-MM-DD/)).toBeVisible();
+  await page.locator("input[type=file]").setInputFiles({ name: "students.csv", mimeType: "text/csv", buffer: Buffer.from(csv.split("\n").slice(0, 2).join("\n") + "\n") });
+  await page.getByRole("button", { name: "Import" }).click();
+  await expect(page.getByText("Imported 1 students rows.")).toBeVisible();
+  await page.goto("/students");
+  await expect(page.getByText("Student, Test")).toBeVisible();
+});

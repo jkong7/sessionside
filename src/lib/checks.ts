@@ -22,6 +22,7 @@ export type CheckContext = {
   settings: DistrictSettings;
   today: string;
   sameDayUnits?: number;
+  schoolAttendance?: string | null;
 };
 
 export type Billability = "billable" | "ready_to_sign" | "awaiting_cosign" | "blocked" | "not_billable";
@@ -61,6 +62,8 @@ export function checkEncounter(ctx: CheckContext): Issue[] {
     );
     return issues;
   }
+
+  if (ctx.schoolAttendance === "absent") add("SCHOOL_ABSENT", "block", "School attendance shows the student absent all day on this date.", "Correct the date or attendance; billing for an absent student is a top audit finding.");
 
   if (!student.medicaid_id) add("MEDICAID_ID_MISSING", "block", "Student has no Medicaid ID on file.", "Confirm enrollment with the district Medicaid coordinator.");
 

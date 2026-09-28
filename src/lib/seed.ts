@@ -114,8 +114,8 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
       const iepStart = addDays(base, -40 - i * 17);
       const dob = `${2026 - 6 - (s.grade === "K" ? 0 : Number(s.grade))}-${String((i % 12) + 1).padStart(2, "0")}-${String(((i * 7) % 27) + 1).padStart(2, "0")}`;
       database
-        .prepare("INSERT INTO students (id, district_id, first_name, last_name, dob, school, grade, medicaid_id, iep_start, iep_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .run(id, districtId, s.first, s.last, dob, s.school, s.grade, s.medicaid ? `IL${String(710000000 + i * 3917).slice(0, 9)}` : null, iepStart, addDays(iepStart, 364));
+        .prepare("INSERT INTO students (id, district_id, first_name, last_name, dob, school, grade, medicaid_id, iep_start, iep_end, local_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        .run(id, districtId, s.first, s.last, dob, s.school, s.grade, s.medicaid ? `IL${String(710000000 + i * 3917).slice(0, 9)}` : null, iepStart, addDays(iepStart, 364), `S${String(1001 + i)}`);
 
       const goals: Goal[] = s.goals.map((key) => {
         const spec = GOALS[key];
@@ -220,6 +220,10 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
         insertEnc.run(uid("enc"), sl.student, sl.provider, date, sl.start, transcript, JSON.stringify(note), JSON.stringify(draftNote), status, signedAt, signedAt ? sl.provider : null, cosignedAt, cosignedAt ? userIds.maya : null, created, signedAt ?? created);
       }
     }
+    const conflicts = database
+      .prepare("SELECT student_id, date FROM encounters WHERE status = 'signed' AND json_extract(note, '$.attendance') = 'present' AND student_id IN ('stu_liam', 'stu_zoe') ORDER BY date LIMIT 2")
+      .all() as { student_id: string; date: string }[];
+    for (const c of conflicts) database.prepare("INSERT OR IGNORE INTO school_attendance (student_id, date, status) VALUES (?, ?, 'absent')").run(c.student_id, c.date);
     database.exec("COMMIT");
   } catch (e) {
     database.exec("ROLLBACK");

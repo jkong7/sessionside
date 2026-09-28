@@ -20,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           { href: "/claims", label: "Claims" },
           { href: "/exports", label: "Exports" },
           { href: "/students", label: "Students" },
+          { href: "/imports", label: "Imports" },
           { href: "/settings", label: "District settings" },
         ]
       : [

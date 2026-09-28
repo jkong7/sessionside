@@ -49,7 +49,14 @@ CREATE TABLE IF NOT EXISTS students (
   grade TEXT NOT NULL,
   medicaid_id TEXT,
   iep_start TEXT NOT NULL,
-  iep_end TEXT NOT NULL
+  iep_end TEXT NOT NULL,
+  local_id TEXT
+);
+CREATE TABLE IF NOT EXISTS school_attendance (
+  student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,
+  status TEXT NOT NULL,
+  PRIMARY KEY (student_id, date)
 );
 CREATE TABLE IF NOT EXISTS services (
   id TEXT PRIMARY KEY,
@@ -185,6 +192,7 @@ const COLUMNS: [string, string, string][] = [
   ["auth_sessions", "last_seen_at", "TEXT"],
   ["encounters", "group_key", "TEXT"],
   ["encounters", "draft_note", "TEXT"],
+  ["students", "local_id", "TEXT"],
 ];
 
 function migrate(database: DatabaseSync): void {

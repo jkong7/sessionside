@@ -43,6 +43,7 @@ export type Student = {
   medicaid_id: string | null;
   iep_start: string;
   iep_end: string;
+  local_id?: string | null;
 };
 
 export type Service = {

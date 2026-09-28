@@ -37,7 +37,7 @@ test("note review meets WCAG 2.1 AA", async ({ page }) => {
   expect(await scan(page)).toEqual([]);
 });
 
-for (const path of ["/settings", "/claims/binder", "/students/stu_ava"]) {
+for (const path of ["/settings", "/claims/binder", "/students/stu_ava", "/imports"]) {
   test(`coordinator ${path} meets WCAG 2.1 AA`, async ({ page }) => {
     await login(page, "Dana Whitfield");
     await page.goto(path);

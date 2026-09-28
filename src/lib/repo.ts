@@ -180,7 +180,9 @@ export function contextFor(enc: Pick<Encounter, "student_id" | "provider_id" | "
     .filter((r) => r.id !== enc.id)
     .map((r) => JSON.parse(String(r.note)) as Note)
     .filter((n) => n.attendance === "present" && n.cpt);
+  const att = one<{ status: string }>("SELECT status FROM school_attendance WHERE student_id = ? AND date = ?", enc.student_id, enc.date);
   return {
+    schoolAttendance: att?.status ?? null,
     sameDayUnits: sameDay.reduce((n, x) => n + (x.units ?? 0), 0),
     encounter: enc,
     student,
