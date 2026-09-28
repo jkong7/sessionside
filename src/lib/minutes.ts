@@ -11,6 +11,7 @@ export type MinutesRow = {
   delivered: number;
   billable: number;
   blockedMinutes: number;
+  pendingMinutes: number;
   unlogged: { date: string; start: string; minutes: number }[];
   remaining: number;
   owed: number;
@@ -50,6 +51,7 @@ export function weekReport(opts: { districtId: string; providerIds?: string[]; w
     const blockedEncs = present.filter((e) => e.state === "blocked");
     const billable = billableEncs.reduce((n, e) => n + (e.note.minutes ?? 0), 0);
     const blockedMinutes = blockedEncs.reduce((n, e) => n + (e.note.minutes ?? 0), 0);
+    const pendingMinutes = present.filter((e) => e.state === "ready_to_sign" || e.state === "awaiting_cosign").reduce((n, e) => n + (e.note.minutes ?? 0), 0);
     const slots = (slotCache.get(sv.provider_id) ?? []).filter((s) => s.student_id === sv.student_id);
     const unlogged: MinutesRow["unlogged"] = [];
     let remaining = 0;
@@ -71,6 +73,7 @@ export function weekReport(opts: { districtId: string; providerIds?: string[]; w
       delivered,
       billable,
       blockedMinutes,
+      pendingMinutes,
       unlogged,
       remaining,
       owed,

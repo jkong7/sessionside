@@ -94,6 +94,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Prom
                         </li>
                       ))}
                       {r.blockedMinutes > 0 && <li className="text-warn">{r.blockedMinutes} min delivered but blocked from billing</li>}
+                      {r.pendingMinutes > 0 && <li className="text-brand">{r.pendingMinutes} min waiting on a signature or co-sign</li>}
                       {r.makeups > 0 && <li className="text-ink-3">{r.makeups} missed for provider or closure, make-up needed</li>}
                     </ul>
                   </td>
