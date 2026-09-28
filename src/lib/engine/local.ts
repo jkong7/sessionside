@@ -21,10 +21,37 @@ const STOP = new Set(["the", "and", "with", "will", "to", "in", "of", "a", "an",
 
 export function sentences(text: string): string[] {
   return text
-    .replace(/\s+/g, " ")
+    .replace(/[ \t]+/g, " ")
     .split(/(?<=[.!?])\s+|\n+/)
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+const MEASURE_SPAN = /\b\d{1,3}\s*(?:out of|of|\/)\s*\d{1,3}(?:\s*(?:trials|attempts|opportunities|times|flights|tries))?|\b\d{1,3}\s*(?:%|percent)/i;
+const CUE_TAIL = /^\s*,?\s*(?:with\s+)?(?:(?:minimal|min|moderate|mod|maximal|max)\.?\s*(?:verbal|visual|tactile|physical|gestural|model(?:ing)?)?\s*(?:cues?|cueing|prompts?|prompting|support|assist(?:ance)?)|independent(?:ly)?|no (?:cues|prompts)|without (?:cues|prompts|help))/i;
+
+export function clauses(text: string): string[] {
+  const out: string[] = [];
+  for (const sentence of sentences(wordsToDigits(text))) {
+    let rest = sentence;
+    for (;;) {
+      const m = new RegExp(MEASURE_SPAN.source, "i").exec(rest);
+      if (!m) break;
+      let end = m.index + m[0].length;
+      const tail = rest.slice(end).match(CUE_TAIL);
+      if (tail) end += tail[0].length;
+      const next = rest.slice(end);
+      if (!new RegExp(MEASURE_SPAN.source, "i").test(next)) break;
+      out.push(rest.slice(0, end).trim().replace(/^(and|then|also|,)\s+/i, ""));
+      rest = next.replace(/^[\s,;]+/, "");
+    }
+    const leftover = rest.trim().replace(/^(and|then|also)\s+/i, "");
+    if (!leftover) continue;
+    const tailSplit = leftover.match(/^(.*?\b\d{1,3}\s*(?:out of|of|\/|%|percent)[^]*?)\s+((?:next (?:session|time|week)|plan|will continue|homework)[^]*)$/i);
+    if (tailSplit) out.push(tailSplit[1].trim(), tailSplit[2].trim());
+    else out.push(leftover);
+  }
+  return out.filter(Boolean);
 }
 
 export function detectAttendance(text: string): Attendance {
@@ -35,13 +62,34 @@ export function detectAttendance(text: string): Attendance {
   return "present";
 }
 
-export function detectMinutes(text: string): number | null {
+export type MinuteMention = { value: number; excluded: boolean };
+
+const MINUTE_EXCLUDE_AFTER = /^\s*(?:late|early|break|of (?:free|down) ?time|to (?:transition|walk|get|set up)|behind|ahead|remaining)/;
+const MINUTE_EXCLUDE_BEFORE = /\b(?:arrived|came|showed up|left|ended|was|were|ran)\s*$/;
+
+export function minuteMentions(text: string): MinuteMention[] {
   const t = wordsToDigits(text.toLowerCase());
-  if (/\b(a |one )?half[- ](an )?hour\b/.test(t)) return 30;
-  const m = t.match(/\b(\d{1,3})[\s-]?(?:min|mins|minute|minutes)\b/);
-  if (m) return Number(m[1]);
-  if (/\b(an|1|one) hour\b/.test(t)) return 60;
-  return null;
+  const out: MinuteMention[] = [];
+  const re = /\b(\d{1,3})[\s-]?(?:min|mins|minute|minutes)\b|\b(?:a |1 )?half[- ](?:an )?hour\b|\b(?:an|1) hour\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(t))) {
+    const value = m[1] ? Number(m[1]) : m[0].includes("half") ? 30 : 60;
+    const after = t.slice(m.index + m[0].length, m.index + m[0].length + 24);
+    const before = t.slice(Math.max(0, m.index - 16), m.index);
+    out.push({ value, excluded: MINUTE_EXCLUDE_AFTER.test(after) || MINUTE_EXCLUDE_BEFORE.test(before) });
+  }
+  return out;
+}
+
+export function detectMinutes(text: string): number | null {
+  const kept = minuteMentions(text).filter((m) => !m.excluded && m.value > 0 && m.value <= 240);
+  if (!kept.length) return null;
+  return Math.max(...kept.map((m) => m.value));
+}
+
+export function minutesConflict(text: string): boolean {
+  const kept = new Set(minuteMentions(text).filter((m) => !m.excluded).map((m) => m.value));
+  return kept.size > 1;
 }
 
 export function detectSetting(text: string, fallback: Setting): { setting: Setting; groupSize: number | null } {
@@ -61,7 +109,8 @@ export function extractMeasure(sentence: string): Pick<GoalData, "correct" | "tr
   let trials: number | null = null;
   let percent: number | null = null;
   const ratio = t.match(/\b(\d{1,3})\s*(?:out of|\/|of)\s*(\d{1,3})\b/);
-  if (ratio && Number(ratio[2]) > 0 && Number(ratio[1]) <= Number(ratio[2])) {
+  const looksLikeDate = ratio != null && ratio[0].includes("/") && (/\b(on|by|due|since|from)\s*$/.test(t.slice(0, ratio.index)) || /^\/\d/.test(t.slice((ratio.index ?? 0) + ratio[0].length)));
+  if (ratio && !looksLikeDate && Number(ratio[2]) > 0 && Number(ratio[1]) <= Number(ratio[2])) {
     correct = Number(ratio[1]);
     trials = Number(ratio[2]);
     percent = Math.round((correct / trials) * 100);
@@ -132,7 +181,7 @@ export function draftLocal(input: DraftInput): Note {
   const response: string[] = [];
   const plan: string[] = [];
 
-  for (const s of sentences(text)) {
+  for (const s of clauses(text)) {
     const measure = extractMeasure(s);
     const hasData = measure.percent != null || measure.cue != null;
     const goal = matchGoal(s, disciplineGoals);
@@ -172,6 +221,7 @@ export function draftLocal(input: DraftInput): Note {
 
   if (attendance === "present") {
     if (minutesSource === "missing") uncertain.push("Session minutes were not stated. Enter the actual minutes before signing.");
+    if (minutesSource === "stated" && minutesConflict(text)) uncertain.push("Several durations were mentioned. Confirm the total minutes delivered.");
     if (byGoal.size === 0 && disciplineGoals.length > 0) uncertain.push("No goal data captured. Add progress for at least one IEP goal.");
     if (setting === "group" && !groupSize) uncertain.push("Group session but group size was not stated.");
   }
