@@ -112,3 +112,14 @@ test("progress report drafts from session data and locks when signed", async ({ 
   await page.goto("/progress");
   await expect(page.getByRole("link", { name: /Morales, Ava/ }).getByText("Finalized")).toBeVisible();
 });
+
+test("audit binder shows proof for each claimable session", async ({ page }) => {
+  await login(page, "Dana Whitfield");
+  await page.goto("/claims");
+  await page.getByRole("link", { name: "Audit binder" }).click();
+  await expect(page.getByRole("heading", { name: "Audit binder" })).toBeVisible();
+  const first = page.locator("article").first();
+  await expect(first.getByText(/Parental billing consent: signed/)).toBeVisible();
+  await expect(first.getByText("All checks passed.")).toBeVisible();
+  await expect(first.getByText(/NPI \d{10} \(valid\)/).first()).toBeVisible();
+});

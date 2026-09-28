@@ -43,3 +43,7 @@ body { -webkit-font-smoothing: antialiased; }
   main { padding: 0 !important; }
   .card { border: none; }
 }
+
+@media print {
+  .break-after-page { break-after: page; }
+}

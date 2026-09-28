@@ -230,6 +230,10 @@ export default async function NotePage({ params, searchParams }: { params: Promi
           </form>
         )}
 
+        {e.status !== "draft" && (
+          <Link href={`/claims/binder?id=${e.id}`} className="btn-ghost w-full">Open audit binder page</Link>
+        )}
+
         <section className="card p-4">
           <h2 className="text-sm font-semibold">Audit trail</h2>
           <ol className="mt-2 space-y-1.5 text-xs text-ink-3">

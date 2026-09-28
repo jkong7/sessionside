@@ -22,6 +22,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
           <label>From<input type="date" name="from" defaultValue={r.from} className="field mt-0.5" /></label>
           <label>To<input type="date" name="to" defaultValue={r.to} className="field mt-0.5" /></label>
           <button className="btn-ghost" type="submit">Apply</button>
+          <Link className="btn-ghost" href={`/claims/binder?from=${r.from}&to=${r.to}`}>Audit binder</Link>
           <a className="btn-primary" href={`/api/claims?from=${r.from}&to=${r.to}`}>Export CSV ({r.lines.length})</a>
         </form>
       </header>
