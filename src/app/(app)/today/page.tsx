@@ -96,7 +96,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         <h2 className="text-sm font-semibold">Make-up or unscheduled session</h2>
         <form action="/capture" className="mt-3 flex flex-wrap gap-2">
           <input type="hidden" name="date" value={date} />
-          <select name="student" className="field max-w-xs" required>
+          <select name="student" aria-label="Student" className="field max-w-xs" required>
             {students.map((s) => (
               <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>
             ))}

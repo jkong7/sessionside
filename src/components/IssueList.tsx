@@ -23,7 +23,7 @@ export function IssueList({ issues, compact }: { issues: Issue[]; compact?: bool
       {sorted.map((i) => (
         <li key={i.code + i.message} className={`rounded-lg border px-3 py-2 text-sm ${STYLE[i.severity]}`}>
           <p className="font-medium">{i.message}</p>
-          <p className="text-xs opacity-80">{i.fix}</p>
+          <p className="text-xs">{i.fix}</p>
         </li>
       ))}
     </ul>

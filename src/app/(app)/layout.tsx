@@ -34,13 +34,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ];
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col md:flex-row">
-      <aside className="border-b border-line bg-surface md:min-h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:shadow">
+        Skip to main content
+      </a>
+      <aside aria-label="Sidebar" className="border-b border-line bg-surface md:min-h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
         <div className="p-3 md:sticky md:top-0 md:p-4">
         <div className="mb-3 flex items-center gap-2 px-2 text-sm font-semibold">
           <span className="grid size-7 place-items-center rounded-lg bg-brand text-white">S</span>
           Sessionside
         </div>
-        <Nav items={items} />
+        <nav aria-label="Main">
+          <Nav items={items} />
+        </nav>
         <div className="mt-4 hidden border-t border-line px-2 pt-4 text-xs text-ink-3 md:block">
           <p className="font-medium text-ink-2">{user.name}</p>
           <p>{user.credential}</p>
@@ -51,7 +56,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 p-4 md:p-8">
+      <main id="main" tabIndex={-1} className="min-w-0 flex-1 p-4 outline-none md:p-8">
         <OfflineSync />
         {children}
       </main>

@@ -11,19 +11,19 @@
   --color-line-strong: #c9ced8;
   --color-ink: #141a26;
   --color-ink-2: #3a4252;
-  --color-ink-3: #677083;
-  --color-ink-4: #9aa1af;
+  --color-ink-3: #555e70;
+  --color-ink-4: #667085;
 
-  --color-brand: #3b4fd8;
+  --color-brand: #3346c9;
   --color-brand-600: #2f40b5;
   --color-brand-50: #eceffd;
   --color-brand-100: #d7ddfb;
 
-  --color-block: #c2362f;
+  --color-block: #ad2922;
   --color-block-50: #fbeceb;
-  --color-warn: #a86a12;
+  --color-warn: #86520a;
   --color-warn-50: #fbf3e2;
-  --color-ok: #25794f;
+  --color-ok: #1f6b45;
   --color-ok-50: #e6f4ec;
 }
 
@@ -46,4 +46,13 @@ body { -webkit-font-smoothing: antialiased; }
 
 @media print {
   .break-after-page { break-after: page; }
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
