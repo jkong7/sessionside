@@ -2,7 +2,8 @@ import { today } from "./dates";
 import { splitGroupDictation } from "./engine/group";
 import { uid } from "./ids";
 import { draftNote } from "./draft";
-import { audit, createEncounter, encounterForSlot, getStudent, goalsFor, servicesFor } from "./repo";
+import { audit, createEncounter, encounterForSlot, getDistrict, getStudent, goalsFor, servicesFor } from "./repo";
+import { rulePack } from "./rules";
 import type { Attendance, Setting, User } from "./types";
 
 const ATTENDANCE = new Set(["present", "student_absent", "provider_absent", "school_closed"]);
@@ -15,6 +16,7 @@ export type CaptureInput = {
   minutes: string;
   attendance: string;
   setting: string;
+  timeStart?: string;
 };
 
 export async function createDraft(user: User, input: CaptureInput): Promise<{ id: string; existing?: boolean } | { error: string }> {
@@ -32,7 +34,9 @@ export async function createDraft(user: User, input: CaptureInput): Promise<{ id
   const enteredAttendance = ATTENDANCE.has(input.attendance) && input.attendance !== "present" ? (input.attendance as Attendance) : null;
   const setting: Setting = input.setting === "group" || input.setting === "individual" ? input.setting : service.setting;
   const transcript = input.transcript.trim();
-  const note = await draftNote({ transcript, discipline: user.discipline, goals: goalsFor(input.studentId), scheduledSetting: setting, enteredMinutes, enteredAttendance });
+  const pack = rulePack(getDistrict(user.district_id).settings.state);
+  const enteredStart = /^\d{2}:\d{2}$/.test(input.timeStart ?? "") ? input.timeStart! : /^\d{2}:\d{2}$/.test(input.start) ? input.start : null;
+  const note = await draftNote({ transcript, discipline: user.discipline, goals: goalsFor(input.studentId), scheduledSetting: setting, enteredMinutes, enteredAttendance, enteredStart, pack, assistant: user.role === "assistant" });
   const enc = createEncounter({ studentId: input.studentId, providerId: user.id, date, start: input.start, transcript, note });
   audit(user.id, "draft.created", "encounter", enc.id, { engine: note.engine, minutes_source: note.minutes_source });
   return { id: enc.id };
@@ -73,6 +77,9 @@ export async function createGroupDraft(user: User, input: GroupCaptureInput): Pr
       transcript,
       discipline: user.discipline,
       goals: goalsFor(student.id),
+      pack: rulePack(getDistrict(user.district_id).settings.state),
+      assistant: user.role === "assistant",
+      enteredStart: /^\d{2}:\d{2}$/.test(input.start) ? input.start : null,
       scheduledSetting: "group",
       enteredMinutes: isAbsent ? null : enteredMinutes,
       enteredAttendance: isAbsent ? "student_absent" : null,

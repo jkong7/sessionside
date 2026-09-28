@@ -8,7 +8,8 @@ import { BILLABILITY_LABEL } from "@/lib/checks";
 import { formatDate } from "@/lib/dates";
 import { noteChanges } from "@/lib/diff";
 import { CPT_LABELS } from "@/lib/engine/cpt";
-import { addendaFor, auditFor, getEncounter, getStudent, getUser, goalsFor } from "@/lib/repo";
+import { rulePack } from "@/lib/rules";
+import { addendaFor, auditFor, getDistrict, getEncounter, getStudent, getUser, goalsFor } from "@/lib/repo";
 import { evaluate, STATE_STYLE } from "@/lib/status";
 
 const ATTENDANCE_LABEL: Record<string, string> = {
@@ -64,7 +65,7 @@ export default async function NotePage({ params, searchParams }: { params: Promi
 
         {editable ? (
           <form action={saveNote.bind(null, e.id)} className="card space-y-4 p-4">
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-3">
               <label className="text-sm font-medium">
                 Attendance
                 <select name="attendance" defaultValue={n.attendance} className="field mt-1">
@@ -85,6 +86,14 @@ export default async function NotePage({ params, searchParams }: { params: Promi
               <label className="text-sm font-medium">
                 Group size
                 <input name="group_size" inputMode="numeric" defaultValue={n.group_size ?? ""} className="field mt-1" />
+              </label>
+              <label className="text-sm font-medium">
+                Start time
+                <input type="time" name="time_start" defaultValue={n.time_start ?? ""} className="field mt-1" />
+              </label>
+              <label className="text-sm font-medium">
+                End time
+                <input type="time" name="time_end" defaultValue={n.time_end ?? ""} className="field mt-1" />
               </label>
             </div>
             <label className="block text-sm font-medium">
@@ -136,7 +145,8 @@ export default async function NotePage({ params, searchParams }: { params: Promi
               <Field k="Attendance" v={ATTENDANCE_LABEL[n.attendance]} />
               <Field k="Minutes" v={n.minutes != null ? String(n.minutes) : "Missing"} />
               <Field k="Setting" v={`${n.setting}${n.group_size ? ` (${n.group_size})` : ""}`} />
-              <Field k="Code" v={n.cpt ? `${n.cpt} x${n.units}` : "None"} />
+              <Field k="Code" v={n.cpt ? `${n.cpt}${n.modifiers?.length ? `-${n.modifiers.join("-")}` : ""} x${n.units}` : "None"} />
+              {n.time_start && <Field k="Time" v={`${n.time_start} to ${n.time_end ?? "?"}`} />}
             </dl>
             {n.goals.length > 0 && (
               <table className="w-full text-left">
@@ -218,7 +228,7 @@ export default async function NotePage({ params, searchParams }: { params: Promi
           <IssueList issues={e.issues} />
           {n.cpt && (
             <p className="text-xs text-ink-3">
-              Code {n.cpt} x{n.units}: {CPT_LABELS[n.cpt]}. Engine: {n.engine}.
+              Code {n.cpt}{n.modifiers?.length ? `-${n.modifiers.join("-")}` : ""} x{n.units}: {CPT_LABELS[n.cpt]}. Rules: {rulePack(getDistrict(student.district_id).settings.state).program}. Engine: {n.engine}.
             </p>
           )}
         </section>

@@ -4,7 +4,8 @@ import { captureSession } from "@/app/actions";
 import { CaptureForm } from "@/components/CaptureForm";
 import { requireUser } from "@/lib/auth";
 import { formatDate, today } from "@/lib/dates";
-import { getStudent, goalsFor, servicesFor } from "@/lib/repo";
+import { getDistrict, getStudent, goalsFor, servicesFor } from "@/lib/repo";
+import { rulePack } from "@/lib/rules";
 
 export default async function CapturePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
@@ -41,6 +42,7 @@ export default async function CapturePage({ searchParams }: { searchParams: Prom
         start={sp.start ?? ""}
         setting={sp.setting ?? service.setting}
         scheduledMinutes={scheduled}
+        requireTimes={rulePack(getDistrict(user.district_id).settings.state).requireTimes}
       />
       <p className="text-xs text-ink-4">
         Dictate after the session, away from students. Sessionside never records children and never fills in minutes you did not enter or say.

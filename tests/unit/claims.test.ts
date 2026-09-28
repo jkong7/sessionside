@@ -9,7 +9,11 @@ const line: ClaimLine = {
   providerName: "Maya Chen",
   providerNpi: "1548720931",
   cpt: "92507",
+  modifiers: "",
   units: 1,
+  timeStart: "09:00",
+  timeEnd: "09:30",
+  orderingNpi: "1234567893",
   minutes: 30,
   setting: "individual",
   groupSize: null,
@@ -25,5 +29,6 @@ describe("toCsv", () => {
     expect(rows[1]).toContain('"Morales, Ava"');
     expect(rows[2]).toContain("'=HYPERLINK(1)");
     expect(rows[1].split(",").at(-2)).toBe("03");
+    expect(rows[0].split(",")).toContain("ordering_npi");
   });
 });

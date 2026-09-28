@@ -84,7 +84,7 @@ export async function draftWithClaude(input: DraftInput, client = new Anthropic(
   const present = attendance === "present";
   if (present && minutesSource === "missing") uncertain.push("Session minutes were not stated. Enter the actual minutes before signing.");
   if (present && goalData.length === 0 && goals.length > 0) uncertain.push("No goal data captured. Add progress for at least one IEP goal.");
-  const { cpt, units } = codeFor(input.discipline, setting, attendance, minutes);
+  const { cpt, units, modifiers } = codeFor(input.discipline, setting, attendance, minutes, input.pack, input.assistant);
   const local = draftLocal({ ...input, enteredAttendance: attendance, enteredMinutes: minutes });
 
   return {
@@ -100,6 +100,9 @@ export async function draftWithClaude(input: DraftInput, client = new Anthropic(
     attendance,
     cpt,
     units,
+    modifiers,
+    time_start: present ? local.time_start : null,
+    time_end: present ? local.time_end : null,
     engine: `claude:${response.model}`,
     uncertain,
   };

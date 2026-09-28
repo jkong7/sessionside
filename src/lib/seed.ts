@@ -3,6 +3,7 @@ import { addDays, today as todayFn, weekday } from "./dates";
 import { draftLocal } from "./engine/local";
 import { uid } from "./ids";
 import { makeNpi } from "./npi";
+import { rulePack } from "./rules";
 import { hashPassword } from "./password";
 import type { Discipline, DistrictSettings, Goal, Role, Setting } from "./types";
 
@@ -84,10 +85,11 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
   const r = rng(20260928);
   const pick = <T,>(xs: T[]) => xs[Math.floor(r() * xs.length)];
   const settings: DistrictSettings = {
-    signatureDeadlineDays: 5,
-    ordersRequired: ["ot", "pt"],
-    rates: { "92507": 58.4, "92508": 21.1, "97530": 24.9, "97110": 22.7, "97150": 17.3 },
+    state: "IL",
+    noteDeadlineDays: 7,
+    rates: { "92507": 29.2, "92508": 10.6, "97535": 24.9, "97530": 24.9, "97799": 12.4, "97110": 22.7, "97150": 17.3 },
   };
+  const pack = rulePack(settings.state);
   const districtId = "dist_lakeshore";
   database.exec("BEGIN");
   try {
@@ -130,7 +132,7 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
 
       for (const sv of s.services) {
         database.prepare("INSERT INTO services (id, student_id, discipline, minutes_per_week, setting, provider_id) VALUES (?, ?, ?, ?, ?, ?)").run(uid("svc"), id, sv.discipline, sv.minutes, sv.setting, userIds[sv.provider]);
-        if (settings.ordersRequired.includes(sv.discipline) && !(s.orderMissing && sv.discipline === "pt")) {
+        if (pack.orders[sv.discipline].required && !(s.orderMissing && sv.discipline === "pt")) {
           const signed = s.orderExpired ? addDays(base, -380) : addDays(iepStart, -5);
           database
             .prepare("INSERT INTO orders (id, student_id, discipline, prescriber, prescriber_npi, signed_on, expires_on) VALUES (?, ?, ?, ?, ?, ?, ?)")
@@ -192,7 +194,7 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
           parts.push(pick(RESPONSES), pick(PLANS));
           transcript = parts.join(" ");
         }
-        const note = draftLocal({ transcript, discipline: sl.discipline, goals, scheduledSetting: sl.setting });
+        const note = draftLocal({ transcript, discipline: sl.discipline, goals, scheduledSetting: sl.setting, pack, enteredStart: sl.start, assistant: sl.provider === userIds.jordan });
         const isAssistant = sl.provider === userIds.jordan;
         const recent = back <= 3;
         const unsigned = recent ? r() < 0.6 : r() < 0.07;

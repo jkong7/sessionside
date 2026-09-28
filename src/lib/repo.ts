@@ -34,6 +34,10 @@ export function getDistrict(id: string): District {
   return toDistrict(r);
 }
 
+export function updateDistrictSettings(id: string, settings: District["settings"]): void {
+  db().prepare("UPDATE districts SET settings = ? WHERE id = ?").run(JSON.stringify(settings), id);
+}
+
 export function getUser(id: string): User | null {
   return one<User>(`SELECT ${USER_COLS} FROM users WHERE id = ?`, id);
 }
@@ -169,10 +173,15 @@ export function deleteEncounter(id: string): void {
   db().prepare("DELETE FROM encounters WHERE id = ?").run(id);
 }
 
-export function contextFor(enc: Pick<Encounter, "student_id" | "provider_id" | "date" | "note" | "status" | "signed_at" | "cosigned_at">): CheckContext {
+export function contextFor(enc: Pick<Encounter, "student_id" | "provider_id" | "date" | "note" | "status" | "signed_at" | "cosigned_at"> & { id?: string }): CheckContext {
   const student = getStudent(enc.student_id)!;
   const provider = getUser(enc.provider_id)!;
+  const sameDay = all<Row>("SELECT e.id, e.note FROM encounters e JOIN users u ON u.id = e.provider_id WHERE e.student_id = ? AND e.date = ? AND u.discipline = ? AND e.created_at < COALESCE((SELECT created_at FROM encounters WHERE id = ?), '9999')", enc.student_id, enc.date, provider.discipline ?? "", enc.id ?? "")
+    .filter((r) => r.id !== enc.id)
+    .map((r) => JSON.parse(String(r.note)) as Note)
+    .filter((n) => n.attendance === "present" && n.cpt);
   return {
+    sameDayUnits: sameDay.reduce((n, x) => n + (x.units ?? 0), 0),
     encounter: enc,
     student,
     provider,

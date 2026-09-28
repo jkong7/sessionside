@@ -123,3 +123,16 @@ test("audit binder shows proof for each claimable session", async ({ page }) => 
   await expect(first.getByText("All checks passed.")).toBeVisible();
   await expect(first.getByText(/NPI \d{10} \(valid\)/).first()).toBeVisible();
 });
+
+test("coordinator switches state rules and notes re-check", async ({ page }) => {
+  await login(page, "Dana Whitfield");
+  await page.goto("/settings");
+  await expect(page.getByText("Illinois rules Sessionside enforces")).toBeVisible();
+  await page.locator("select[name=state]").selectOption("TX");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Texas rules Sessionside enforces")).toBeVisible();
+  await expect(page.getByText(/7 days, late notes not claimable/)).toBeVisible();
+  await page.locator("select[name=state]").selectOption("IL");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Illinois rules Sessionside enforces")).toBeVisible();
+});

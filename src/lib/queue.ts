@@ -6,6 +6,7 @@ export type QueuedCapture = {
   start: string;
   transcript: string;
   minutes: string;
+  timeStart?: string;
   attendance: string;
   setting: string;
   queuedAt: string;

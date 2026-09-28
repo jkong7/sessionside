@@ -8,6 +8,7 @@ const Body = z.object({
   start: z.string().default(""),
   transcript: z.string().max(20000).default(""),
   minutes: z.string().default(""),
+  timeStart: z.string().default(""),
   attendance: z.string().default("present"),
   setting: z.string().default(""),
 });

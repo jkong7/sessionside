@@ -1,5 +1,6 @@
 import { addDays, weekday } from "./dates";
 import { codeFor } from "./engine/cpt";
+import { rulePack } from "./rules";
 import { allServices, encountersFor, getDistrict, getStudent, getUser, slotsForProvider } from "./repo";
 import { evaluate, type Evaluated } from "./status";
 import type { Discipline, Service, Student, User } from "./types";
@@ -35,7 +36,8 @@ export function claimValue(e: Evaluated, rates: Record<string, number>): number 
   if (e.note.attendance !== "present") return 0;
   const discipline = getUser(e.provider_id)?.discipline;
   if (!discipline) return 0;
-  const est = codeFor(discipline, e.note.setting, "present", ESTIMATE_MINUTES);
+  const provider = getUser(e.provider_id)!;
+  const est = codeFor(discipline, e.note.setting, "present", ESTIMATE_MINUTES, rulePack(getDistrict(provider.district_id).settings.state));
   return est.cpt ? (rates[est.cpt] ?? 0) * est.units : 0;
 }
 

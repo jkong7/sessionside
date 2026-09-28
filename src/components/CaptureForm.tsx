@@ -20,10 +20,12 @@ export function CaptureForm(props: {
   start: string;
   setting: string;
   scheduledMinutes: number | null;
+  requireTimes?: boolean;
 }) {
   const { text, setText, interim, listening, supported, toggle, stop } = useDictation();
   const [attendance, setAttendance] = useState("present");
   const [minutes, setMinutes] = useState("");
+  const [timeStart, setTimeStart] = useState(props.start);
   const [pending, setPending] = useState(false);
   const router = useRouter();
 
@@ -42,6 +44,7 @@ export function CaptureForm(props: {
             start: props.start,
             transcript: String(fd.get("transcript") ?? ""),
             minutes: String(fd.get("minutes") ?? ""),
+            timeStart: String(fd.get("timeStart") ?? ""),
             attendance,
             setting: props.setting,
           });
@@ -110,6 +113,11 @@ export function CaptureForm(props: {
             )}
             <span className="text-xs text-ink-4">Leave blank if you said it in the summary.</span>
           </div>
+          <label className="mt-3 flex items-center gap-2 text-sm font-medium">
+            Start time
+            <input type="time" name="timeStart" value={timeStart} onChange={(e) => setTimeStart(e.target.value)} className="field w-32" required={props.requireTimes} />
+            {props.requireTimes && <span className="text-xs font-normal text-ink-4">Required by your state. End time is start plus minutes.</span>}
+          </label>
         </div>
       )}
 

@@ -1,4 +1,5 @@
-import { businessDaysBetween, today, weekStart } from "./dates";
+import { noteDeadline } from "./checks";
+import { daysBetween, today, weekStart } from "./dates";
 import { weekReport } from "./minutes";
 import { assistantsOf, encountersFor, getDistrict } from "./repo";
 import { evaluate } from "./status";
@@ -13,10 +14,10 @@ export type Digest = {
 
 export function buildDigest(user: User, baseUrl = "https://app.sessionside.test"): Digest {
   const t = today();
-  const deadline = getDistrict(user.district_id).settings.signatureDeadlineDays;
+  const deadline = noteDeadline(getDistrict(user.district_id).settings)?.days ?? 7;
   const drafts = encountersFor({ providerIds: [user.id], status: ["draft"] }).map(evaluate);
-  const dueToday = drafts.filter((e) => businessDaysBetween(e.date, t) === deadline).length;
-  const overdue = drafts.filter((e) => businessDaysBetween(e.date, t) > deadline).length;
+  const dueToday = drafts.filter((e) => daysBetween(e.date, t) === deadline).length;
+  const overdue = drafts.filter((e) => daysBetween(e.date, t) > deadline).length;
   const blocked = drafts.filter((e) => e.state === "blocked").length;
   const report = weekReport({ districtId: user.district_id, providerIds: [user.id], weekStart: weekStart(t), today: t });
   const toCosign = encountersFor({ providerIds: assistantsOf(user.id).map((a) => a.id), status: ["cosign_pending"] }).length;

@@ -1,6 +1,6 @@
 import { addDays, today } from "./dates";
 import { claimValue } from "./minutes";
-import { assistantsOf, encountersFor, getDistrict, getStudent, getUser, listUsers } from "./repo";
+import { assistantsOf, encountersFor, getDistrict, getStudent, getUser, listUsers, ordersFor } from "./repo";
 import { evaluate, type Evaluated } from "./status";
 import type { User } from "./types";
 
@@ -31,7 +31,11 @@ export type ClaimLine = {
   providerName: string;
   providerNpi: string;
   cpt: string;
+  modifiers: string;
   units: number;
+  timeStart: string;
+  timeEnd: string;
+  orderingNpi: string;
   minutes: number;
   setting: string;
   groupSize: number | null;
@@ -85,7 +89,11 @@ function toLine(e: Evaluated, rates: Record<string, number>): ClaimLine {
     providerName: p.name,
     providerNpi: p.npi,
     cpt: e.note.cpt ?? "",
+    modifiers: (e.note.modifiers ?? []).join(" "),
     units: e.note.units,
+    timeStart: e.note.time_start ?? "",
+    timeEnd: e.note.time_end ?? "",
+    orderingNpi: ordersFor(s.id).filter((o) => o.discipline === p.discipline && o.signed_on <= e.date).at(-1)?.prescriber_npi ?? "",
     minutes: e.note.minutes ?? 0,
     setting: e.note.setting,
     groupSize: e.note.group_size,
@@ -101,7 +109,7 @@ function csvCell(v: string | number | null): string {
 }
 
 export function toCsv(lines: ClaimLine[]): string {
-  const header = ["date_of_service", "student", "medicaid_id", "provider", "provider_npi", "procedure_code", "units", "minutes", "setting", "group_size", "place_of_service", "encounter_id"];
-  const rows = lines.map((l) => [l.date, l.studentName, l.medicaidId, l.providerName, l.providerNpi, l.cpt, l.units, l.minutes, l.setting, l.groupSize, l.pos, l.encounterId].map(csvCell).join(","));
+  const header = ["date_of_service", "student", "medicaid_id", "provider", "provider_npi", "ordering_npi", "procedure_code", "modifiers", "units", "minutes", "time_start", "time_end", "setting", "group_size", "place_of_service", "encounter_id"];
+  const rows = lines.map((l) => [l.date, l.studentName, l.medicaidId, l.providerName, l.providerNpi, l.orderingNpi, l.cpt, l.modifiers, l.units, l.minutes, l.timeStart, l.timeEnd, l.setting, l.groupSize, l.pos, l.encounterId].map(csvCell).join(","));
   return [header.join(","), ...rows].join("\n") + "\n";
 }

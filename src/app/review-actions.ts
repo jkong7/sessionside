@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { canCosign, canEdit } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { codeFor } from "@/lib/engine/cpt";
-import { addAddendum, audit, deleteEncounter, encountersFor, getEncounter, goalsFor, markCosigned, markSigned, updateEncounterNote } from "@/lib/repo";
+import { rulePack } from "@/lib/rules";
+import { addAddendum, audit, deleteEncounter, getDistrict, encountersFor, getEncounter, goalsFor, markCosigned, markSigned, updateEncounterNote } from "@/lib/repo";
 import { evaluate } from "@/lib/status";
 import type { Attendance, GoalData, Note, Setting } from "@/lib/types";
 import { validateNote } from "@/lib/validate";
@@ -36,7 +37,10 @@ export async function saveNote(id: string, formData: FormData) {
     const prev = enc.note.goals.find((x) => x.goal_id === g.id);
     goals.push({ goal_id: g.id, correct, trials, percent, cue, evidence: prev?.evidence ?? "Entered on review" });
   }
-  const { cpt, units } = codeFor(user.discipline, setting, attendance, minutes);
+  const pack = rulePack(getDistrict(user.district_id).settings.state);
+  const { cpt, units, modifiers } = codeFor(user.discipline, setting, attendance, minutes, pack, user.role === "assistant");
+  const timeStart = /^\d{2}:\d{2}$/.test(String(formData.get("time_start") ?? "")) ? String(formData.get("time_start")) : null;
+  const timeEnd = /^\d{2}:\d{2}$/.test(String(formData.get("time_end") ?? "")) ? String(formData.get("time_end")) : null;
   const lines = (k: string) =>
     String(formData.get(k) ?? "")
       .split("\n")
@@ -56,6 +60,9 @@ export async function saveNote(id: string, formData: FormData) {
     attendance,
     cpt,
     units,
+    modifiers,
+    time_start: attendance === "present" ? timeStart : null,
+    time_end: attendance === "present" ? timeEnd : null,
     uncertain: [],
   };
   const errors = validateNote(note);

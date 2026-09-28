@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { rulePack } from "@/lib/rules";
 import { BILLABILITY_LABEL } from "@/lib/checks";
 import { formatDate, today } from "@/lib/dates";
 import { goalProgress } from "@/lib/progress";
@@ -21,7 +22,7 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
   const consent = consentsFor(id).at(-1);
   const orders = ordersFor(id);
   const t = today();
-  const required = services.filter((sv) => getDistrict(s.district_id).settings.ordersRequired.includes(sv.discipline));
+  const required = services.filter((sv) => rulePack(getDistrict(s.district_id).settings.state).orders[sv.discipline].required);
 
   return (
     <div className="space-y-6">

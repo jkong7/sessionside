@@ -1,4 +1,5 @@
 import type { Attendance, Discipline, Goal, GoalData, Note, Setting } from "../types";
+import type { RulePack } from "../rules";
 import { codeFor } from "./cpt";
 import { wordsToDigits } from "./numbers";
 
@@ -9,7 +10,39 @@ export type DraftInput = {
   scheduledSetting: Setting;
   enteredMinutes?: number | null;
   enteredAttendance?: Attendance | null;
+  enteredStart?: string | null;
+  pack?: RulePack;
+  assistant?: boolean;
 };
+
+function toMinutesOfDay(h: number, m: number, ampm?: string): number {
+  let hour = h % 12;
+  if (ampm?.toLowerCase() === "pm") hour += 12;
+  else if (!ampm && h < 7) hour += 12;
+  else if (!ampm && h >= 12) hour = h;
+  return hour * 60 + m;
+}
+
+export function hhmm(total: number): string {
+  const t = ((total % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+export function addMinutes(start: string, minutes: number): string {
+  const [h, m] = start.split(":").map(Number);
+  return hhmm(h * 60 + m + minutes);
+}
+
+export function detectTimes(text: string): { start: string; end: string } | null {
+  const t = wordsToDigits(text.toLowerCase());
+  const m = t.match(/\b(\d{1,2}):(\d{2})\s*(am|pm)?\s*(?:to|-|until|till|through)\s*(\d{1,2}):(\d{2})\s*(am|pm)?\b/);
+  if (!m) return null;
+  const a = toMinutesOfDay(Number(m[1]), Number(m[2]), m[3] ?? m[6]);
+  let b = toMinutesOfDay(Number(m[4]), Number(m[5]), m[6] ?? m[3]);
+  if (b <= a && b + 720 > a) b += 720;
+  if (b <= a || b - a > 240) return null;
+  return { start: hhmm(a), end: hhmm(b) };
+}
 
 const DISCIPLINE_LABEL: Record<Discipline, string> = {
   slp: "speech-language therapy",
@@ -173,6 +206,15 @@ export function draftLocal(input: DraftInput): Note {
     minutes = stated;
     minutesSource = "stated";
   }
+  const times = detectTimes(text);
+  if (minutesSource === "missing" && times) {
+    const [sh, sm] = times.start.split(":").map(Number);
+    const [eh, em] = times.end.split(":").map(Number);
+    minutes = eh * 60 + em - (sh * 60 + sm);
+    minutesSource = "stated";
+  }
+  const timeStart = times?.start ?? input.enteredStart ?? null;
+  const timeEnd = times?.end ?? (timeStart && minutes ? addMinutes(timeStart, minutes) : null);
   const { setting, groupSize } = detectSetting(text, input.scheduledSetting);
 
   const disciplineGoals = input.goals.filter((g) => g.discipline === input.discipline);
@@ -226,7 +268,7 @@ export function draftLocal(input: DraftInput): Note {
     if (setting === "group" && !groupSize) uncertain.push("Group session but group size was not stated.");
   }
 
-  const { cpt, units } = codeFor(input.discipline, setting, attendance, minutes);
+  const { cpt, units, modifiers } = codeFor(input.discipline, setting, attendance, minutes, input.pack, input.assistant);
   const goalCount = byGoal.size;
   const summary =
     attendance === "present"
@@ -250,6 +292,9 @@ export function draftLocal(input: DraftInput): Note {
     attendance,
     cpt,
     units,
+    modifiers,
+    time_start: attendance === "present" ? timeStart : null,
+    time_end: attendance === "present" ? timeEnd : null,
     engine: "local-rules-v1",
     uncertain,
   };

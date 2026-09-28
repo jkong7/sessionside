@@ -13,6 +13,7 @@ export async function captureSession(formData: FormData) {
     start: String(formData.get("start") ?? ""),
     transcript: String(formData.get("transcript") ?? ""),
     minutes: String(formData.get("minutes") ?? ""),
+    timeStart: String(formData.get("timeStart") ?? ""),
     attendance: String(formData.get("attendance") ?? ""),
     setting: String(formData.get("setting") ?? ""),
   });

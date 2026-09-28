@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { codeFor, timedUnits } from "@/lib/engine/cpt";
+import { RULE_PACKS } from "@/lib/rules";
+import { detectTimes } from "@/lib/engine/local";
 import { detectAttendance, detectMinutes, detectSetting, draftLocal, extractMeasure, matchGoal } from "@/lib/engine/local";
 import { wordsToDigits } from "@/lib/engine/numbers";
 import type { Goal } from "@/lib/types";
@@ -68,12 +70,18 @@ describe("codes", () => {
     expect(timedUnits(23)).toBe(2);
     expect(timedUnits(30)).toBe(2);
   });
-  it("picks speech individual vs group and OT timed codes", () => {
-    expect(codeFor("slp", "individual", "present", 30)).toEqual({ cpt: "92507", units: 1 });
-    expect(codeFor("slp", "group", "present", 30)).toEqual({ cpt: "92508", units: 1 });
-    expect(codeFor("ot", "individual", "present", 30)).toEqual({ cpt: "97530", units: 2 });
-    expect(codeFor("pt", "group", "present", 30)).toEqual({ cpt: "97150", units: 1 });
-    expect(codeFor("slp", "individual", "student_absent", 30)).toEqual({ cpt: null, units: 0 });
+  it("codes by state rule pack", () => {
+    const IL = RULE_PACKS.IL;
+    const NY = RULE_PACKS.NY;
+    const TX = RULE_PACKS.TX;
+    expect(codeFor("slp", "individual", "present", 30, IL)).toEqual({ cpt: "92507", units: 2, modifiers: [] });
+    expect(codeFor("ot", "individual", "present", 30, IL)).toEqual({ cpt: "97535", units: 2, modifiers: [] });
+    expect(codeFor("ot", "group", "present", 30, IL)).toEqual({ cpt: "97799", units: 2, modifiers: [] });
+    expect(codeFor("slp", "individual", "present", 30, NY)).toEqual({ cpt: "92507", units: 1, modifiers: ["GN"] });
+    expect(codeFor("pt", "group", "present", 30, NY)).toEqual({ cpt: "97150", units: 1, modifiers: ["GP"] });
+    expect(codeFor("slp", "individual", "present", 30, TX, true)).toEqual({ cpt: "92507", units: 1, modifiers: ["GN", "U1"] });
+    expect(codeFor("ot", "individual", "present", 30, TX)).toEqual({ cpt: "97530", units: 2, modifiers: ["GO"] });
+    expect(codeFor("slp", "individual", "student_absent", 30, IL)).toEqual({ cpt: null, units: 0, modifiers: [] });
   });
 });
 
@@ -121,5 +129,17 @@ describe("draftLocal", () => {
   it("flags data that does not match a goal", () => {
     const note = draftLocal({ transcript: "30 minutes. Got 90 percent on the worksheet.", discipline: "slp", goals, scheduledSetting: "individual" });
     expect(note.uncertain.some((u) => u.includes("did not match"))).toBe(true);
+  });
+});
+
+describe("clock times", () => {
+  it("reads start and end times and derives minutes", () => {
+    expect(detectTimes("from 9:05 to 9:35")).toEqual({ start: "09:05", end: "09:35" });
+    expect(detectTimes("1:10 - 1:40")).toEqual({ start: "13:10", end: "13:40" });
+    expect(detectTimes("11:45 to 12:15")).toEqual({ start: "11:45", end: "12:15" });
+    const n = draftLocal({ transcript: "9:00 to 9:25. Initial r words 8 out of 10.", discipline: "slp", goals, scheduledSetting: "individual" });
+    expect(n.minutes).toBe(25);
+    expect(n.time_start).toBe("09:00");
+    expect(n.time_end).toBe("09:25");
   });
 });

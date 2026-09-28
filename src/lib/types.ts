@@ -26,8 +26,8 @@ export type District = {
 };
 
 export type DistrictSettings = {
-  signatureDeadlineDays: number;
-  ordersRequired: Discipline[];
+  state: "IL" | "NY" | "TX" | "MI";
+  noteDeadlineDays?: number;
   rates: Record<string, number>;
 };
 
@@ -112,6 +112,9 @@ export type Note = {
   attendance: Attendance;
   cpt: string | null;
   units: number;
+  modifiers?: string[];
+  time_start?: string | null;
+  time_end?: string | null;
   engine: string;
   uncertain: string[];
 };

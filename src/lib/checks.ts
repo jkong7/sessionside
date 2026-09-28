@@ -1,5 +1,6 @@
-import { businessDaysBetween, daysBetween } from "./dates";
+import { addDays, daysBetween } from "./dates";
 import { isValidNpi } from "./npi";
+import { rulePack, type RulePack } from "./rules";
 import type { Consent, DistrictSettings, Encounter, Order, Service, Student, User } from "./types";
 
 export type Severity = "block" | "warn" | "info";
@@ -20,6 +21,7 @@ export type CheckContext = {
   orders: Order[];
   settings: DistrictSettings;
   today: string;
+  sameDayUnits?: number;
 };
 
 export type Billability = "billable" | "ready_to_sign" | "awaiting_cosign" | "blocked" | "not_billable";
@@ -30,8 +32,20 @@ const ATTENDANCE_TEXT: Record<string, string> = {
   school_closed: "School closed",
 };
 
+export function packFor(settings: DistrictSettings): RulePack {
+  return rulePack(settings.state);
+}
+
+export function noteDeadline(settings: DistrictSettings): { days: number; hard: boolean } | null {
+  const pack = packFor(settings);
+  if (pack.noteDeadline) return pack.noteDeadline;
+  if (settings.noteDeadlineDays != null) return { days: settings.noteDeadlineDays, hard: false };
+  return null;
+}
+
 export function checkEncounter(ctx: CheckContext): Issue[] {
   const { encounter, student, provider, settings, today } = ctx;
+  const pack = packFor(settings);
   const note = encounter.note;
   const date = encounter.date;
   const discipline = provider.discipline;
@@ -61,13 +75,29 @@ export function checkEncounter(ctx: CheckContext): Issue[] {
   const service = ctx.services.find((s) => s.discipline === discipline);
   if (!service) add("NOT_ON_IEP", "block", "This service is not on the student's IEP.", "Only IEP-mandated services can be claimed.");
 
-  if (discipline && settings.ordersRequired.includes(discipline)) {
+  if (discipline && pack.orders[discipline].required) {
+    const rule = pack.orders[discipline];
     const order = ctx.orders
       .filter((o) => o.discipline === discipline && o.signed_on <= date)
       .sort((a, b) => b.signed_on.localeCompare(a.signed_on))[0];
-    if (!order) add("ORDER_MISSING", "block", "No signed referral or prescription on file.", "Request an order from a licensed prescriber.");
-    else if (order.expires_on < date) add("ORDER_EXPIRED", "block", `Referral expired ${order.expires_on}.`, "Request a renewed order before claiming.");
-    else if (!isValidNpi(order.prescriber_npi)) add("PRESCRIBER_NPI_INVALID", "block", `Prescriber NPI ${order.prescriber_npi} fails the NPI check digit.`, "Correct the prescriber NPI on the order.");
+    const future = ctx.orders.find((o) => o.discipline === discipline && o.signed_on > date);
+    if (!order) {
+      add(
+        "ORDER_MISSING",
+        "block",
+        future ? `${rule.label} was signed ${future.signed_on}, after this session.` : `No signed ${rule.label.toLowerCase()} on file (${pack.name} requires one for this service).`,
+        future ? `${pack.name} requires the ${rule.label.toLowerCase()} before services begin.` : `Request a ${rule.label.toLowerCase()} from an enrolled practitioner.`,
+      );
+    } else {
+      const limit = addDays(order.signed_on, rule.validityDays);
+      const expires = order.expires_on < limit ? order.expires_on : limit;
+      if (expires < date) add("ORDER_EXPIRED", "block", `${rule.label} expired ${expires}.`, `Renew it; ${pack.name} accepts ${rule.validityDays >= 1000 ? "3-year" : "annual"} ${rule.label.toLowerCase()}s.`);
+      else if (!isValidNpi(order.prescriber_npi)) add("PRESCRIBER_NPI_INVALID", "block", `Ordering practitioner NPI ${order.prescriber_npi} fails the NPI check digit.`, "Correct the NPI on the order; it is required on the claim.");
+      else {
+        const left = daysBetween(today, expires);
+        if (left >= 0 && left <= 30) add("ORDER_EXPIRING", "warn", `${rule.label} expires in ${left} days (${expires}).`, "Request the renewal now so upcoming sessions stay billable.");
+      }
+    }
   }
 
   if (!isValidNpi(provider.npi)) add("PROVIDER_NPI_INVALID", "block", `Your NPI ${provider.npi || "(blank)"} is not a valid NPI.`, "Fix the NPI in your profile.");
@@ -76,24 +106,56 @@ export function checkEncounter(ctx: CheckContext): Issue[] {
     const left = daysBetween(today, provider.license_expires);
     if (left >= 0 && left <= 45) add("LICENSE_EXPIRING", "warn", `License expires in ${left} days (${provider.license_expires}).`, "Renew now so future sessions stay billable.");
   }
+  if (pack.requireCccForSlp && discipline === "slp" && provider.role === "therapist" && !/CCC/i.test(provider.credential)) {
+    add("CREDENTIAL_NOT_BILLABLE", "block", `${pack.name} requires ASHA CCC or equivalent for SLP claims.`, "Record the CCC or equivalency, or have a qualified SLP supervise and co-sign.");
+  }
 
   if (note.minutes == null || note.minutes_source === "missing") add("MINUTES_MISSING", "block", "Actual session minutes are missing.", "Enter the minutes you delivered. Scheduled minutes are never assumed.");
   else if (!note.cpt) add("CODE_MISSING", "block", "No billable code for this session length.", "Timed codes need at least 8 minutes.");
 
-  if (note.setting === "group" && !note.group_size) add("GROUP_SIZE_MISSING", "warn", "Group session without a group size.", "Add how many students were in the group.");
-  if (note.goals.length === 0) add("NO_GOAL_DATA", "warn", "No progress data for any IEP goal.", "Add data for at least one goal so the note supports progress reporting.");
+  if (pack.requireTimes && (!note.time_start || !note.time_end)) add("TIMES_MISSING", "block", `${pack.name} requires start and end times on the note.`, "Enter when the session started and ended.");
+
+  if (note.setting === "group") {
+    if (!note.group_size) add("GROUP_SIZE_MISSING", pack.group.max ? "block" : "warn", "Group session without a group size.", "Add how many students were in the group.");
+    else if (note.group_size < pack.group.min || (pack.group.max != null && note.group_size > pack.group.max)) {
+      add("GROUP_SIZE_INVALID", "block", `${pack.name} allows groups of ${pack.group.min} to ${pack.group.max ?? "any size"}; this note says ${note.group_size}.`, "Correct the group size or split the group.");
+    }
+  }
+
+  if (note.goals.length === 0) {
+    if (pack.requireGoalLink) add("NO_GOAL_DATA", "block", `${pack.name} requires the related IEP goal on every note.`, "Add data for at least one IEP goal.");
+    else add("NO_GOAL_DATA", "warn", "No progress data for any IEP goal.", "Add data for at least one goal so the note supports progress reporting.");
+  }
   for (const u of note.uncertain.filter((x) => x.includes("did not match"))) add("UNMATCHED_DATA", "warn", u, "Link the data to a goal or delete it.");
 
-  if (provider.role === "assistant" && !provider.supervisor_id) add("SUPERVISOR_MISSING", "block", "Assistant has no supervising therapist on file.", "Assign a supervisor in district settings.");
+  if (discipline && note.cpt) {
+    const cap = pack.codes[discipline].maxUnitsPerDay;
+    const total = (ctx.sameDayUnits ?? 0) + note.units;
+    if (cap != null && total > cap) add("DAILY_UNIT_CAP", "block", `${total} units for this student today; ${pack.name} allows ${cap} per day for this service.`, "Only the first units up to the cap can be claimed.");
+  }
 
-  const deadline = settings.signatureDeadlineDays;
-  if (encounter.status === "draft") {
-    const elapsed = businessDaysBetween(date, today);
-    if (elapsed > deadline) add("SIGNATURE_OVERDUE", "block", `Unsigned ${elapsed} business days after the session (limit ${deadline}).`, "Sign now; late notes may be denied.");
-    else if (elapsed === deadline) add("SIGNATURE_DUE", "warn", "Signature due today.", "Review and sign today.");
-  } else if (encounter.signed_at) {
-    const elapsed = businessDaysBetween(date, encounter.signed_at.slice(0, 10));
-    if (elapsed > deadline) add("SIGNED_LATE", "warn", `Signed ${elapsed} business days after the session (limit ${deadline}).`, "Late signatures can be denied on audit.");
+  if (provider.role === "assistant") {
+    if (!provider.supervisor_id) add("SUPERVISOR_MISSING", "block", "Assistant has no supervising therapist on file.", "Assign a supervisor in district settings.");
+    if (pack.cosign.withinDays != null && encounter.status === "cosign_pending" && encounter.signed_at) {
+      const waited = daysBetween(encounter.signed_at.slice(0, 10), today);
+      if (waited > pack.cosign.withinDays) add("COSIGN_OVERDUE", "block", `Supervisor co-sign is ${waited} days after signing (limit ${pack.cosign.withinDays}).`, "Co-sign now; late co-signs may not support the claim.");
+    }
+  }
+
+  const deadline = noteDeadline(settings);
+  if (deadline) {
+    if (encounter.status === "draft") {
+      const elapsed = daysBetween(date, today);
+      if (elapsed > deadline.days) add("SIGNATURE_OVERDUE", deadline.hard ? "block" : "warn", `Unsigned ${elapsed} days after the session (${deadline.hard ? `${pack.name} limit` : "district policy"} ${deadline.days === 0 ? "same day" : `${deadline.days} days`}).`, deadline.hard ? "Late notes do not support a claim." : "Sign now; late notes draw audit attention.");
+      else if (elapsed === deadline.days && deadline.days > 0) add("SIGNATURE_DUE", "warn", "Signature due today.", "Review and sign today.");
+    } else if (encounter.signed_at) {
+      const elapsed = daysBetween(date, encounter.signed_at.slice(0, 10));
+      if (elapsed > deadline.days) add("SIGNED_LATE", deadline.hard ? "block" : "warn", `Signed ${elapsed} days after the session (limit ${deadline.days === 0 ? "same day" : `${deadline.days} days`}).`, deadline.hard ? `${pack.name} does not accept late documentation.` : "Late signatures can be questioned on audit.");
+    }
+  }
+
+  if (pack.filingLimitDays != null && daysBetween(date, today) > pack.filingLimitDays) {
+    add("PAST_FILING_LIMIT", "block", `More than ${pack.filingLimitDays} days since the session.`, `${pack.name} will reject claims past its timely filing limit.`);
   }
 
   return issues;
@@ -101,10 +163,10 @@ export function checkEncounter(ctx: CheckContext): Issue[] {
 
 export function billability(ctx: CheckContext, issues = checkEncounter(ctx)): Billability {
   if (ctx.encounter.note.attendance !== "present") return "not_billable";
-  const blocking = issues.filter((i) => i.severity === "block" && i.code !== "SIGNATURE_OVERDUE");
+  const blocking = issues.filter((i) => i.severity === "block");
+  if (ctx.encounter.status === "draft") return blocking.length ? "blocked" : "ready_to_sign";
   if (blocking.length) return "blocked";
-  if (ctx.encounter.status === "draft") return issues.some((i) => i.code === "SIGNATURE_OVERDUE") ? "blocked" : "ready_to_sign";
-  if (ctx.provider.role === "assistant" && !ctx.encounter.cosigned_at) return "awaiting_cosign";
+  if (ctx.provider.role === "assistant" && packFor(ctx.settings).cosign.required && !ctx.encounter.cosigned_at) return "awaiting_cosign";
   return "billable";
 }
 
