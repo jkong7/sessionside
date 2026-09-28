@@ -168,7 +168,7 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
     });
 
     const insertEnc = database.prepare(
-      "INSERT INTO encounters (id, student_id, provider_id, date, start, transcript, note, status, signed_at, signed_by, cosigned_at, cosigned_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO encounters (id, student_id, provider_id, date, start, transcript, note, draft_note, status, signed_at, signed_by, cosigned_at, cosigned_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
     for (let back = 21; back >= 1; back--) {
       const date = addDays(base, -back);
@@ -210,7 +210,12 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
             else status = "cosign_pending";
           }
         }
-        insertEnc.run(uid("enc"), sl.student, sl.provider, date, sl.start, transcript, JSON.stringify(note), status, signedAt, signedAt ? sl.provider : null, cosignedAt, cosignedAt ? userIds.maya : null, created, signedAt ?? created);
+        let draftNote = note;
+        if (status !== "draft" && note.attendance === "present" && note.goals.length && r() < 0.25) {
+          const g = note.goals[0];
+          draftNote = { ...note, goals: [{ ...g, cue: g.cue === "minimal" ? "moderate" : "minimal" }, ...note.goals.slice(1)] };
+        }
+        insertEnc.run(uid("enc"), sl.student, sl.provider, date, sl.start, transcript, JSON.stringify(note), JSON.stringify(draftNote), status, signedAt, signedAt ? sl.provider : null, cosignedAt, cosignedAt ? userIds.maya : null, created, signedAt ?? created);
       }
     }
     database.exec("COMMIT");

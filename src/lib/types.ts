@@ -130,6 +130,7 @@ export type Encounter = {
   cosigned_at: string | null;
   cosigned_by: string | null;
   group_key?: string | null;
+  draft_note?: Note | null;
   created_at: string;
   updated_at: string;
 };

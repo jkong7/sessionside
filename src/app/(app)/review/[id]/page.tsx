@@ -6,6 +6,7 @@ import { canCosign, canEdit, canView } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { BILLABILITY_LABEL } from "@/lib/checks";
 import { formatDate } from "@/lib/dates";
+import { noteChanges } from "@/lib/diff";
 import { CPT_LABELS } from "@/lib/engine/cpt";
 import { addendaFor, auditFor, getEncounter, getStudent, getUser, goalsFor } from "@/lib/repo";
 import { evaluate, STATE_STYLE } from "@/lib/status";
@@ -34,6 +35,7 @@ export default async function NotePage({ params, searchParams }: { params: Promi
   const addenda = addendaFor(e.id);
   const canAddend = !editable && e.status !== "draft" && user.role !== "coordinator";
   const delivered = n.attendance === "present";
+  const changes = e.draft_note ? noteChanges(e.draft_note, n, (gid) => goals.find((g) => g.id === gid)?.area ?? gid) : [];
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -178,6 +180,28 @@ export default async function NotePage({ params, searchParams }: { params: Promi
               </form>
             )}
           </section>
+        )}
+
+        {e.draft_note && (
+          <details className="card p-4 text-sm" open={changes.length > 0 && !editable}>
+            <summary className="cursor-pointer font-medium text-ink-2">
+              {changes.length ? `${changes.length} change${changes.length > 1 ? "s" : ""} from the ${n.engine.startsWith("claude") ? "AI" : "automatic"} draft` : `No changes from the ${n.engine.startsWith("claude") ? "AI" : "automatic"} draft`}
+            </summary>
+            {changes.length > 0 && (
+              <table className="mt-2 w-full text-left text-xs">
+                <thead className="text-ink-3"><tr><th className="py-1">Field</th><th>Draft</th><th>{editable ? "Now" : "Signed"}</th></tr></thead>
+                <tbody>
+                  {changes.map((c) => (
+                    <tr key={c.field} className="border-t border-line align-top">
+                      <td className="py-1 pr-2 font-medium">{c.field}</td>
+                      <td className="pr-2 text-ink-3 line-through decoration-ink-4">{c.from}</td>
+                      <td>{c.to}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </details>
         )}
 
         {e.transcript && (

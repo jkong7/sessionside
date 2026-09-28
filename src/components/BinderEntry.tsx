@@ -1,4 +1,5 @@
 import { formatDate } from "@/lib/dates";
+import { noteChanges } from "@/lib/diff";
 import { CPT_LABELS } from "@/lib/engine/cpt";
 import { isValidNpi } from "@/lib/npi";
 import { addendaFor, auditFor, consentsFor, getStudent, getUser, goalsFor, ordersFor, servicesFor } from "@/lib/repo";
@@ -66,6 +67,7 @@ export function BinderEntry({ e }: { e: Evaluated }) {
         <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-4">Signatures</h3>
         <ul className="space-y-1">
           <li>Signed {e.signed_at ? new Date(e.signed_at).toLocaleString() : "not signed"} by {getUser(e.signed_by ?? "")?.name ?? "n/a"}.{signedAttestation ? ` Attestation: "${JSON.parse(signedAttestation.detail).attestation}"` : ""}</li>
+          {e.draft_note && <li>Draft vs signed: {noteChanges(e.draft_note, n).length} field(s) changed by the clinician before signing.</li>}
           {cosigner && <li>Co-signed {new Date(e.cosigned_at!).toLocaleString()} by {cosigner.name}, {cosigner.credential}.</li>}
         </ul>
       </section>

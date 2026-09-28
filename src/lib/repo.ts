@@ -23,7 +23,7 @@ function toGoal(r: Row): Goal {
 }
 
 function toEncounter(r: Row): Encounter {
-  return { ...(r as unknown as Encounter), note: JSON.parse(String(r.note)) as Note };
+  return { ...(r as unknown as Encounter), note: JSON.parse(String(r.note)) as Note, draft_note: r.draft_note ? (JSON.parse(String(r.draft_note)) as Note) : null };
 }
 
 const USER_COLS = "id, district_id, email, name, role, discipline, credential, npi, license_number, license_expires, supervisor_id";
@@ -143,8 +143,8 @@ export function createEncounter(input: { studentId: string; providerId: string; 
   const id = uid("enc");
   const ts = now();
   db()
-    .prepare("INSERT INTO encounters (id, student_id, provider_id, date, start, transcript, note, status, group_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)")
-    .run(id, input.studentId, input.providerId, input.date, input.start, input.transcript, JSON.stringify(input.note), input.groupKey ?? null, ts, ts);
+    .prepare("INSERT INTO encounters (id, student_id, provider_id, date, start, transcript, note, draft_note, status, group_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)")
+    .run(id, input.studentId, input.providerId, input.date, input.start, input.transcript, JSON.stringify(input.note), JSON.stringify(input.note), input.groupKey ?? null, ts, ts);
   return getEncounter(id)!;
 }
 
