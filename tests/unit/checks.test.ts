@@ -167,3 +167,14 @@ describe("attendance cross-check", () => {
     expect(codes({ ...ctx(), schoolAttendance: "present" })).not.toContain("SCHOOL_ABSENT");
   });
 });
+
+describe("services outside an IEP", () => {
+  const svc504 = [{ id: "sv", student_id: "s", discipline: "slp" as const, minutes_per_week: 60, setting: "individual" as const, provider_id: "u", authority: "504" as const }];
+  it("Illinois bills 504 plan services", () => {
+    expect(codes(ctx({ services: svc504 }))).not.toContain("NON_IEP_NOT_BILLABLE");
+  });
+  it("Texas and New York do not", () => {
+    const tx = { ...ctx({ services: svc504 }), settings: { state: "TX" as const, rates: {} } };
+    expect(codes(tx)).toContain("NON_IEP_NOT_BILLABLE");
+  });
+});

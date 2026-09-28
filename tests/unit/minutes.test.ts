@@ -15,7 +15,7 @@ beforeAll(() => {
 describe("weekReport", () => {
   it("reports every IEP service with consistent totals", () => {
     const r = weekReport({ districtId: "dist_lakeshore", weekStart: "2026-09-21", today: BASE });
-    expect(r.rows.length).toBe(15);
+    expect(r.rows.length).toBe(16);
     for (const row of r.rows) {
       expect(row.billable).toBeLessThanOrEqual(row.delivered);
       expect(row.owed).toBe(Math.max(0, row.mandated - row.delivered - row.remaining));
@@ -34,6 +34,6 @@ describe("weekReport", () => {
   it("scopes to a provider", () => {
     const r = weekReport({ districtId: "dist_lakeshore", providerIds: ["usr_priya"], weekStart: "2026-09-21", today: BASE });
     expect(r.rows.every((x) => x.provider.id === "usr_priya")).toBe(true);
-    expect(r.rows.length).toBe(4);
+    expect(r.rows.length).toBe(5);
   });
 });

@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS services (
   discipline TEXT NOT NULL,
   minutes_per_week INTEGER NOT NULL,
   setting TEXT NOT NULL,
-  provider_id TEXT NOT NULL REFERENCES users(id)
+  provider_id TEXT NOT NULL REFERENCES users(id),
+  authority TEXT NOT NULL DEFAULT 'iep'
 );
 CREATE TABLE IF NOT EXISTS goals (
   id TEXT PRIMARY KEY,
@@ -193,6 +194,7 @@ const COLUMNS: [string, string, string][] = [
   ["encounters", "group_key", "TEXT"],
   ["encounters", "draft_note", "TEXT"],
   ["students", "local_id", "TEXT"],
+  ["services", "authority", "TEXT NOT NULL DEFAULT 'iep'"],
 ];
 
 function migrate(database: DatabaseSync): void {

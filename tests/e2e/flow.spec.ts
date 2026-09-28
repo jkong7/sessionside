@@ -154,7 +154,7 @@ test("coordinator can export all district data; therapists cannot", async ({ pag
   const res = await page.request.get("/api/district-export");
   expect(res.status()).toBe(200);
   const body = await res.json();
-  expect(body.students.length).toBe(12);
+  expect(body.students.length).toBe(13);
   expect(body.users.every((u: Record<string, unknown>) => !("password_hash" in u))).toBe(true);
   const t = await browser.newPage();
   await login(t, "Maya Chen");

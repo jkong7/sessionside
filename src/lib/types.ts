@@ -53,7 +53,10 @@ export type Service = {
   minutes_per_week: number;
   setting: Setting;
   provider_id: string;
+  authority?: Authority;
 };
+
+export type Authority = "iep" | "504" | "health_plan" | "order";
 
 export type Goal = {
   id: string;

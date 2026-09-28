@@ -43,7 +43,7 @@ type StudentSpec = {
   school: string;
   medicaid: boolean;
   consent: "yes" | "missing" | "revoked";
-  services: { discipline: Discipline; provider: string; minutes: number; setting: Setting }[];
+  services: { discipline: Discipline; provider: string; minutes: number; setting: Setting; authority?: "iep" | "504" }[];
   goals: string[];
   orderExpired?: boolean;
   orderMissing?: boolean;
@@ -61,6 +61,7 @@ const STUDENTS: StudentSpec[] = [
   { first: "Harper", last: "Lee", grade: "1", school: "Dewey Elementary", medicaid: true, consent: "yes", services: [{ discipline: "ot", provider: "priya", minutes: 30, setting: "individual" }, { discipline: "pt", provider: "sam", minutes: 30, setting: "individual" }], goals: ["scissors", "balance"], orderMissing: true },
   { first: "Mateo", last: "Rossi", grade: "3", school: "Lincoln Elementary", medicaid: true, consent: "revoked", services: [{ discipline: "slp", provider: "maya", minutes: 60, setting: "individual" }], goals: ["r", "wh"] },
   { first: "Zoe", last: "Thompson", grade: "K", school: "Dewey Elementary", medicaid: true, consent: "yes", services: [{ discipline: "slp", provider: "jordan", minutes: 30, setting: "individual" }], goals: ["vocab"] },
+  { first: "Olivia", last: "Martin", grade: "5", school: "Haven Middle School", medicaid: true, consent: "yes", services: [{ discipline: "ot", provider: "priya", minutes: 30, setting: "individual", authority: "504" }], goals: ["handwriting"] },
   { first: "Jayden", last: "Clark", grade: "4", school: "Lincoln Elementary", medicaid: true, consent: "yes", services: [{ discipline: "ot", provider: "priya", minutes: 30, setting: "individual" }, { discipline: "slp", provider: "maya", minutes: 60, setting: "group" }], goals: ["handwriting", "pragmatics"] },
 ];
 
@@ -131,7 +132,7 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
       }
 
       for (const sv of s.services) {
-        database.prepare("INSERT INTO services (id, student_id, discipline, minutes_per_week, setting, provider_id) VALUES (?, ?, ?, ?, ?, ?)").run(uid("svc"), id, sv.discipline, sv.minutes, sv.setting, userIds[sv.provider]);
+        database.prepare("INSERT INTO services (id, student_id, discipline, minutes_per_week, setting, provider_id, authority) VALUES (?, ?, ?, ?, ?, ?, ?)").run(uid("svc"), id, sv.discipline, sv.minutes, sv.setting, userIds[sv.provider], sv.authority ?? "iep");
         if (pack.orders[sv.discipline].required && !(s.orderMissing && sv.discipline === "pt")) {
           const signed = s.orderExpired ? addDays(base, -380) : addDays(iepStart, -5);
           database

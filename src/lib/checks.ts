@@ -33,6 +33,8 @@ const ATTENDANCE_TEXT: Record<string, string> = {
   school_closed: "School closed",
 };
 
+export const AUTHORITY_LABEL: Record<string, string> = { iep: "IEP", "504": "504 plan", health_plan: "health plan", order: "physician order" };
+
 export function packFor(settings: DistrictSettings): RulePack {
   return rulePack(settings.state);
 }
@@ -73,10 +75,14 @@ export function checkEncounter(ctx: CheckContext): Issue[] {
   if (!consent) add("CONSENT_MISSING", "block", "No parental consent to bill Medicaid on file for this date.", "Request one-time parental consent (34 CFR 300.154).");
   else if (consent.revoked_on && consent.revoked_on <= date) add("CONSENT_REVOKED", "block", `Parent revoked Medicaid billing consent on ${consent.revoked_on}.`, "Deliver services as written in the IEP; do not bill.");
 
-  if (date < student.iep_start || date > student.iep_end) add("IEP_NOT_ACTIVE", "block", `Session date is outside the IEP (${student.iep_start} to ${student.iep_end}).`, "Update the IEP dates or confirm the annual review was held.");
-
   const service = ctx.services.find((s) => s.discipline === discipline);
-  if (!service) add("NOT_ON_IEP", "block", "This service is not on the student's IEP.", "Only IEP-mandated services can be claimed.");
+  const authority = service?.authority ?? "iep";
+  const planName = AUTHORITY_LABEL[authority];
+  if (date < student.iep_start || date > student.iep_end) add("IEP_NOT_ACTIVE", "block", `Session date is outside the ${planName} (${student.iep_start} to ${student.iep_end}).`, `Update the ${planName} dates or confirm the annual review was held.`);
+  if (!service) add("NOT_ON_IEP", "block", "This service is not on the student's IEP or plan.", "Only services in an IEP or an authorized plan can be claimed.");
+  else if (authority !== "iep" && discipline && !pack.nonIepBillable[discipline]) {
+    add("NON_IEP_NOT_BILLABLE", "block", `${pack.name} does not reimburse this service under a ${planName}.`, "Deliver it as planned; bill only IEP services in this state.");
+  }
 
   if (discipline && pack.orders[discipline].required) {
     const rule = pack.orders[discipline];

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { rulePack } from "@/lib/rules";
-import { BILLABILITY_LABEL } from "@/lib/checks";
+import { AUTHORITY_LABEL, BILLABILITY_LABEL } from "@/lib/checks";
 import { formatDate, today } from "@/lib/dates";
 import { goalProgress } from "@/lib/progress";
 import { consentsFor, encountersFor, getDistrict, getStudent, getUser, goalsFor, ordersFor, servicesFor } from "@/lib/repo";
@@ -55,10 +55,10 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
       </section>
 
       <section className="card p-4">
-        <h2 className="text-sm font-semibold">IEP services</h2>
+        <h2 className="text-sm font-semibold">Services</h2>
         <ul className="mt-2 space-y-1 text-sm">
           {services.map((sv) => (
-            <li key={sv.id}>{DISC[sv.discipline]}: {sv.minutes_per_week} min/week, {sv.setting}, {getUser(sv.provider_id)?.name}</li>
+            <li key={sv.id}>{DISC[sv.discipline]}: {sv.minutes_per_week} min/week, {sv.setting}, {getUser(sv.provider_id)?.name}{sv.authority && sv.authority !== "iep" ? ` (under ${AUTHORITY_LABEL[sv.authority]})` : ""}</li>
           ))}
         </ul>
       </section>

@@ -28,6 +28,7 @@ const SCHEMAS = {
     minutes_per_week: z.coerce.number().int().min(1).max(1200),
     setting: z.enum(["individual", "group"], { message: "must be individual or group" }),
     provider_email: z.string().email("must be an email"),
+    authority: z.union([z.enum(["iep", "504", "health_plan", "order"]), z.literal("")]).default("").transform((v) => v || "iep"),
   }),
   goals: z.object({
     student_id: z.string().min(1, "required"),
@@ -111,7 +112,7 @@ export function runImport(districtId: string, kind: ImportKind, csv: string, com
       }
       pending.push(() => {
         db().prepare("DELETE FROM services WHERE student_id = ? AND discipline = ?").run(sid, String(d.discipline));
-        db().prepare("INSERT INTO services (id, student_id, discipline, minutes_per_week, setting, provider_id) VALUES (?, ?, ?, ?, ?, ?)").run(uid("svc"), sid, String(d.discipline), Number(d.minutes_per_week), String(d.setting), provider.id);
+        db().prepare("INSERT INTO services (id, student_id, discipline, minutes_per_week, setting, provider_id, authority) VALUES (?, ?, ?, ?, ?, ?, ?)").run(uid("svc"), sid, String(d.discipline), Number(d.minutes_per_week), String(d.setting), provider.id, String(d.authority));
       });
     } else if (kind === "goals") {
       const keywords = String(d.keywords)
