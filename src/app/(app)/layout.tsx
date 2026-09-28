@@ -25,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           { href: "/minutes", label: "IEP minutes" },
           { href: "/claims", label: "Claims" },
           { href: "/students", label: "Caseload" },
+          { href: "/digest", label: "Daily digest" },
         ];
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col md:flex-row">
