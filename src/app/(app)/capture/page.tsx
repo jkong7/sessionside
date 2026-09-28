@@ -36,6 +36,7 @@ export default async function CapturePage({ searchParams }: { searchParams: Prom
       <CaptureForm
         action={captureSession}
         studentId={student.id}
+        studentName={`${student.first_name} ${student.last_name}`}
         date={date}
         start={sp.start ?? ""}
         setting={sp.setting ?? service.setting}

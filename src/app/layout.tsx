@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Sessionside",
   description: "School therapy session notes that turn into clean Medicaid claims.",
   manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon.svg" },
 };
 
 export const viewport: Viewport = {

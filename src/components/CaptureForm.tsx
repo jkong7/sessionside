@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { enqueue } from "@/lib/queue";
 
 type Recognition = {
   continuous: boolean;
@@ -23,6 +25,7 @@ const ATTENDANCE = [
 export function CaptureForm(props: {
   action: (fd: FormData) => Promise<void>;
   studentId: string;
+  studentName: string;
   date: string;
   start: string;
   setting: string;
@@ -36,6 +39,7 @@ export function CaptureForm(props: {
   const [minutes, setMinutes] = useState("");
   const [pending, setPending] = useState(false);
   const rec = useRef<Recognition | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
@@ -82,6 +86,20 @@ export function CaptureForm(props: {
       action={async (fd) => {
         setPending(true);
         rec.current?.stop();
+        if (!navigator.onLine) {
+          enqueue({
+            studentId: props.studentId,
+            studentName: props.studentName,
+            date: props.date,
+            start: props.start,
+            transcript: String(fd.get("transcript") ?? ""),
+            minutes: String(fd.get("minutes") ?? ""),
+            attendance,
+            setting: props.setting,
+          });
+          router.push(`/today?date=${props.date}`);
+          return;
+        }
         await props.action(fd);
       }}
       className="card space-y-4 p-4"

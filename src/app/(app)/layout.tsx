@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Nav, type NavItem } from "@/components/Nav";
+import { OfflineSync } from "@/components/OfflineSync";
 import { requireUser, signOut } from "@/lib/auth";
 import { getDistrict } from "@/lib/repo";
 
@@ -46,7 +47,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+      <main className="min-w-0 flex-1 p-4 md:p-8">
+        <OfflineSync />
+        {children}
+      </main>
     </div>
   );
 }
