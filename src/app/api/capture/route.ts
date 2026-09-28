@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { currentUser } from "@/lib/auth";
+import { currentUser, sameOrigin } from "@/lib/auth";
 import { createDraft } from "@/lib/capture";
 
 const Body = z.object({
@@ -13,6 +13,7 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!sameOrigin(req)) return Response.json({ error: "forbidden" }, { status: 403 });
   const user = await currentUser();
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   const parsed = Body.safeParse(await req.json().catch(() => null));

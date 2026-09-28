@@ -29,8 +29,16 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS auth_sessions (
   token TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  expires_at TEXT NOT NULL
+  expires_at TEXT NOT NULL,
+  last_seen_at TEXT
 );
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  ok INTEGER NOT NULL,
+  at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS login_attempts_email_at ON login_attempts(email, at);
 CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
   district_id TEXT NOT NULL REFERENCES districts(id),
@@ -125,7 +133,17 @@ export function openDb(file = dbPath()): DatabaseSync {
   const db = new DatabaseSync(file);
   db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+const COLUMNS: [string, string, string][] = [["auth_sessions", "last_seen_at", "TEXT"]];
+
+function migrate(database: DatabaseSync): void {
+  for (const [table, column, type] of COLUMNS) {
+    const cols = database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
 }
 
 export function db(): DatabaseSync {

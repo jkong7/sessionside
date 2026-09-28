@@ -11,9 +11,9 @@ const DEMO = [
 
 async function login(formData: FormData) {
   "use server";
-  const user = await signIn(String(formData.get("email") ?? ""), String(formData.get("password") ?? ""));
-  if (!user) redirect("/login?error=1");
-  redirect(user.role === "coordinator" ? "/minutes" : "/today");
+  const result = await signIn(String(formData.get("email") ?? ""), String(formData.get("password") ?? ""));
+  if ("error" in result) redirect(`/login?error=${result.error}`);
+  redirect(result.user.role === "coordinator" ? "/minutes" : "/today");
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -41,7 +41,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             Password
             <input name="password" type="password" required className="field mt-1" defaultValue="demo" />
           </label>
-          {error && <p className="text-sm text-block">That email and password did not match.</p>}
+          {error && (
+            <p role="alert" className="text-sm text-block">
+              {error === "locked" ? "Too many failed attempts. Try again in 15 minutes." : "That email and password did not match."}
+            </p>
+          )}
           <button className="btn-primary w-full" type="submit">Sign in</button>
         </form>
         <div className="mt-6 border-t border-line pt-4">
