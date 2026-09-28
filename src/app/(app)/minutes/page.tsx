@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MinutesTabs } from "@/components/MinutesTabs";
 import { requireUser } from "@/lib/auth";
 import { addDays, formatDate, today, weekStart } from "@/lib/dates";
 import { weekReport } from "@/lib/minutes";
@@ -22,6 +23,7 @@ export default async function MinutesPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-6">
+      <MinutesTabs active="week" />
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">IEP minutes</h1>
