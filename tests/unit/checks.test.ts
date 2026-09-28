@@ -102,3 +102,18 @@ describe("checkEncounter", () => {
     expect(codes(ctx({ services: [] }))).toContain("NOT_ON_IEP");
   });
 });
+
+import { validateNote } from "@/lib/validate";
+
+describe("validateNote", () => {
+  it("accepts a clean note", () => {
+    expect(validateNote(note)).toEqual([]);
+  });
+  it("rejects impossible values", () => {
+    expect(validateNote({ ...note, minutes: 500 })).toHaveLength(1);
+    expect(validateNote({ ...note, minutes: 0 })).toContain("A delivered session needs more than 0 minutes.");
+    expect(validateNote({ ...note, group_size: 1 })).toHaveLength(1);
+    expect(validateNote({ ...note, goals: [{ ...note.goals[0], correct: 11, trials: 10 }] })).toContain("Correct cannot be more than trials.");
+    expect(validateNote({ ...note, goals: [{ ...note.goals[0], percent: 140 }] })).toContain("Percent must be from 0 to 100.");
+  });
+});

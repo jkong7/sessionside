@@ -5,9 +5,11 @@ import { redirect } from "next/navigation";
 import { canCosign, canEdit } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { codeFor } from "@/lib/engine/cpt";
-import { audit, deleteEncounter, encountersFor, getEncounter, goalsFor, markCosigned, markSigned, updateEncounterNote } from "@/lib/repo";
+import { addAddendum, audit, deleteEncounter, encountersFor, getEncounter, goalsFor, markCosigned, markSigned, updateEncounterNote } from "@/lib/repo";
 import { evaluate } from "@/lib/status";
 import type { Attendance, GoalData, Note, Setting } from "@/lib/types";
+import { validateNote } from "@/lib/validate";
+import { canView } from "@/lib/access";
 
 function num(v: FormDataEntryValue | null): number | null {
   const s = String(v ?? "").trim();
@@ -56,6 +58,8 @@ export async function saveNote(id: string, formData: FormData) {
     units,
     uncertain: [],
   };
+  const errors = validateNote(note);
+  if (errors.length) redirect(`/review/${id}?invalid=${encodeURIComponent(errors.join(" "))}`);
   updateEncounterNote(id, note);
   audit(user.id, "note.edited", "encounter", id, { minutes, cpt, goals: goals.length });
   revalidatePath(`/review/${id}`);
@@ -104,6 +108,17 @@ export async function discardDraft(id: string) {
   deleteEncounter(id);
   audit(user.id, "draft.discarded", "encounter", id, { date: enc.date, student_id: enc.student_id });
   redirect("/today");
+}
+
+export async function addendumAction(id: string, formData: FormData) {
+  const user = await requireUser();
+  const enc = getEncounter(id);
+  if (!enc || enc.status === "draft" || !canView(user, enc) || user.role === "coordinator") redirect("/review");
+  const text = String(formData.get("text") ?? "").trim().slice(0, 4000);
+  if (!text) redirect(`/review/${id}`);
+  const addendumId = addAddendum(id, user.id, text);
+  audit(user.id, "note.addendum", "encounter", id, { addendum: addendumId });
+  redirect(`/review/${id}`);
 }
 
 function attestationText(name: string, date: string): string {

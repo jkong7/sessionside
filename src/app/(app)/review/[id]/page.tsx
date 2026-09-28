@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cosignNote, discardDraft, saveNote, signNote } from "@/app/review-actions";
+import { addendumAction, cosignNote, discardDraft, saveNote, signNote } from "@/app/review-actions";
 import { IssueList } from "@/components/IssueList";
 import { canCosign, canEdit, canView } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { BILLABILITY_LABEL } from "@/lib/checks";
 import { formatDate } from "@/lib/dates";
 import { CPT_LABELS } from "@/lib/engine/cpt";
-import { auditFor, getEncounter, getStudent, getUser, goalsFor } from "@/lib/repo";
+import { addendaFor, auditFor, getEncounter, getStudent, getUser, goalsFor } from "@/lib/repo";
 import { evaluate, STATE_STYLE } from "@/lib/status";
 
 const ATTENDANCE_LABEL: Record<string, string> = {
@@ -17,7 +17,7 @@ const ATTENDANCE_LABEL: Record<string, string> = {
   school_closed: "School closed",
 };
 
-export default async function NotePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; error?: string }> }) {
+export default async function NotePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; error?: string; invalid?: string }> }) {
   const user = await requireUser();
   const { id } = await params;
   const sp = await searchParams;
@@ -31,6 +31,8 @@ export default async function NotePage({ params, searchParams }: { params: Promi
   const cosignable = canCosign(user, e);
   const n = e.note;
   const trail = auditFor("encounter", e.id);
+  const addenda = addendaFor(e.id);
+  const canAddend = !editable && e.status !== "draft" && user.role !== "coordinator";
   const delivered = n.attendance === "present";
 
   return (
@@ -46,6 +48,7 @@ export default async function NotePage({ params, searchParams }: { params: Promi
           </div>
           <span className={`chip px-3 py-1 text-sm ${STATE_STYLE[e.state]}`}>{BILLABILITY_LABEL[e.state]}</span>
         </header>
+        {sp.invalid && <p role="alert" className="rounded-lg bg-block-50 px-3 py-2 text-sm text-block">Not saved. {sp.invalid}</p>}
         {sp.saved && <p className="rounded-lg bg-ok-50 px-3 py-2 text-sm text-ok">Saved. Checks re-ran.</p>}
         {sp.error === "attest" && <p className="rounded-lg bg-block-50 px-3 py-2 text-sm text-block">Check the attestation box to sign.</p>}
         {sp.error === "minutes" && <p className="rounded-lg bg-block-50 px-3 py-2 text-sm text-block">Enter the minutes you delivered before signing.</p>}
@@ -154,6 +157,27 @@ export default async function NotePage({ params, searchParams }: { params: Promi
             {n.response && <Section title="Response">{n.response}</Section>}
             {n.plan && <Section title="Plan">{n.plan}</Section>}
           </article>
+        )}
+
+        {(addenda.length > 0 || canAddend) && (
+          <section className="card space-y-3 p-4 text-sm">
+            <h2 className="font-semibold">Addenda</h2>
+            {addenda.map((a) => (
+              <div key={a.id} className="border-l-2 border-brand-100 pl-3">
+                <p className="text-xs text-ink-3">{a.author_name}, {new Date(a.created_at).toLocaleString()}</p>
+                <p className="whitespace-pre-wrap">{a.text}</p>
+              </div>
+            ))}
+            {canAddend && (
+              <form action={addendumAction.bind(null, e.id)} className="space-y-2">
+                <label className="block text-sm font-medium">
+                  Add an addendum
+                  <textarea name="text" rows={2} required maxLength={4000} className="field mt-1" placeholder="Late entry or correction. Signed notes cannot be edited." />
+                </label>
+                <button className="btn-ghost" type="submit">Add addendum</button>
+              </form>
+            )}
+          </section>
         )}
 
         {e.transcript && (

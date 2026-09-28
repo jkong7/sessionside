@@ -110,6 +110,28 @@ CREATE TABLE IF NOT EXISTS encounters (
 );
 CREATE INDEX IF NOT EXISTS encounters_provider_date ON encounters(provider_id, date);
 CREATE INDEX IF NOT EXISTS encounters_student_date ON encounters(student_id, date);
+CREATE UNIQUE INDEX IF NOT EXISTS encounters_slot ON encounters(provider_id, student_id, date, start) WHERE start != '';
+CREATE TRIGGER IF NOT EXISTS encounters_signed_immutable
+BEFORE UPDATE OF note, transcript, date, start, student_id, provider_id ON encounters
+WHEN OLD.status != 'draft'
+BEGIN SELECT RAISE(ABORT, 'signed encounters cannot be changed; add an addendum'); END;
+CREATE TRIGGER IF NOT EXISTS encounters_no_unsign
+BEFORE UPDATE OF status ON encounters
+WHEN OLD.status != 'draft' AND NEW.status = 'draft'
+BEGIN SELECT RAISE(ABORT, 'signed encounters cannot be reopened'); END;
+CREATE TRIGGER IF NOT EXISTS encounters_no_delete_signed
+BEFORE DELETE ON encounters
+WHEN OLD.status != 'draft'
+BEGIN SELECT RAISE(ABORT, 'signed encounters cannot be deleted'); END;
+CREATE TABLE IF NOT EXISTS addenda (
+  id TEXT PRIMARY KEY,
+  encounter_id TEXT NOT NULL REFERENCES encounters(id),
+  author_id TEXT NOT NULL REFERENCES users(id),
+  text TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS addenda_append_only_u BEFORE UPDATE ON addenda BEGIN SELECT RAISE(ABORT, 'addenda are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS addenda_append_only_d BEFORE DELETE ON addenda BEGIN SELECT RAISE(ABORT, 'addenda are append-only'); END;
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT,
@@ -119,6 +141,8 @@ CREATE TABLE IF NOT EXISTS audit (
   detail TEXT NOT NULL DEFAULT '{}',
   at TEXT NOT NULL
 );
+CREATE TRIGGER IF NOT EXISTS audit_append_only_u BEFORE UPDATE ON audit BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS audit_append_only_d BEFORE DELETE ON audit BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
 `;
 
 type Global = { __sessionsideDb?: DatabaseSync };

@@ -180,6 +180,18 @@ export function contextFor(enc: Pick<Encounter, "student_id" | "provider_id" | "
   };
 }
 
+export type Addendum = { id: string; encounter_id: string; author_id: string; text: string; created_at: string; author_name: string };
+
+export function addendaFor(encounterId: string): Addendum[] {
+  return all<Addendum>("SELECT a.*, u.name AS author_name FROM addenda a JOIN users u ON u.id = a.author_id WHERE a.encounter_id = ? ORDER BY a.created_at", encounterId);
+}
+
+export function addAddendum(encounterId: string, authorId: string, text: string): string {
+  const id = uid("add");
+  db().prepare("INSERT INTO addenda (id, encounter_id, author_id, text, created_at) VALUES (?, ?, ?, ?, ?)").run(id, encounterId, authorId, text, now());
+  return id;
+}
+
 export function audit(userId: string | null, action: string, entity: string, entityId: string, detail: Record<string, unknown> = {}): void {
   db().prepare("INSERT INTO audit (user_id, action, entity, entity_id, detail, at) VALUES (?, ?, ?, ?, ?, ?)").run(userId, action, entity, entityId, JSON.stringify(detail), now());
 }
