@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { saveDistrictSettings } from "@/app/settings-actions";
 import { requireUser } from "@/lib/auth";
-import { getDistrict } from "@/lib/repo";
+import { editRate } from "@/lib/diff";
+import { encountersFor, getDistrict, listUsers } from "@/lib/repo";
 import { RULE_PACKS, rulePack } from "@/lib/rules";
 
 const DISC = { slp: "Speech", ot: "OT", pt: "PT" } as const;
@@ -12,6 +13,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const district = getDistrict(user.district_id);
   const pack = rulePack(district.settings.state);
+  const signed = encountersFor({ providerIds: listUsers(user.district_id).map((u) => u.id), status: ["signed", "cosign_pending"] }).filter((e) => e.draft_note);
+  const rate = editRate(signed.map((e) => ({ draft: e.draft_note!, final: e.note })));
+  const engines = signed.reduce<Record<string, number>>((m, e) => ({ ...m, [e.note.engine.startsWith("claude") ? "AI (Claude)" : "Offline rules engine"]: (m[e.note.engine.startsWith("claude") ? "AI (Claude)" : "Offline rules engine"] ?? 0) + 1 }), {});
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -36,6 +40,22 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </label>
         <button className="btn-primary" type="submit">Save</button>
       </form>
+
+      <section className="card space-y-2 p-4">
+        <h2 className="text-sm font-semibold">Drafting oversight</h2>
+        <p className="text-sm">
+          {rate.notes} signed notes. Clinicians changed the draft on {rate.edited} ({rate.notes ? Math.round((rate.edited / rate.notes) * 100) : 0}%), {rate.fieldsChanged} fields in total. Drafted by: {Object.entries(engines).map(([k, v]) => `${k} ${v}`).join(", ") || "none yet"}.
+        </p>
+        <p className="text-xs text-ink-3">A very low edit rate can mean clinicians are signing without reading; a very high one means drafts need tuning. Each note keeps its original draft for review.</p>
+      </section>
+
+      <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
+        <div>
+          <h2 className="text-sm font-semibold">Your data</h2>
+          <p className="text-sm text-ink-3">Download everything Sessionside holds for this district as JSON. See the <a className="text-brand underline" href="/trust">trust page</a> for data use and AI commitments.</p>
+        </div>
+        <a className="btn-ghost" href="/api/district-export">Export all district data</a>
+      </section>
 
       <section className="card overflow-x-auto p-4">
         <h2 className="text-sm font-semibold">{pack.name} rules Sessionside enforces</h2>

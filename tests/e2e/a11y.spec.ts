@@ -12,10 +12,12 @@ async function scan(page: Page) {
   return results.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s), e.g. ${v.nodes[0]?.target.join(" ")}`);
 }
 
-test("login page meets WCAG 2.1 AA", async ({ page }) => {
-  await page.goto("/login");
-  expect(await scan(page)).toEqual([]);
-});
+for (const path of ["/login", "/trust"]) {
+  test(`public ${path} meets WCAG 2.1 AA`, async ({ page }) => {
+    await page.goto(path);
+    expect(await scan(page)).toEqual([]);
+  });
+}
 
 const therapistPages = ["/today", "/review", "/minutes", "/minutes/ledger", "/progress", "/claims", "/exports", "/students", "/digest", "/capture?student=stu_ava"];
 

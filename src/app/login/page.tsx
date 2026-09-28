@@ -62,6 +62,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             ))}
           </div>
         </div>
+        <p className="mt-4 text-center text-xs text-ink-3"><a className="underline" href="/trust">Trust and data use</a></p>
       </section>
     </main>
   );

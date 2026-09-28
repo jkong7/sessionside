@@ -145,3 +145,15 @@ test("service log export includes absences for the IEP system", async ({ page })
   expect(lines[0]).toBe("Date,Last Name,First Name,Service,Attendance,Minutes,Setting,Group Size,Provider,Goals Addressed,Progress");
   expect(lines.length).toBeGreaterThan(5);
 });
+
+test("coordinator can export all district data; therapists cannot", async ({ page, browser }) => {
+  await login(page, "Dana Whitfield");
+  const res = await page.request.get("/api/district-export");
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body.students.length).toBe(12);
+  expect(body.users.every((u: Record<string, unknown>) => !("password_hash" in u))).toBe(true);
+  const t = await browser.newPage();
+  await login(t, "Maya Chen");
+  expect((await t.request.get("/api/district-export")).status()).toBe(403);
+});
