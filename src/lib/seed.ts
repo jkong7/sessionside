@@ -173,7 +173,7 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
     const insertEnc = database.prepare(
       "INSERT INTO encounters (id, student_id, provider_id, date, start, transcript, note, draft_note, status, signed_at, signed_by, cosigned_at, cosigned_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
-    for (let back = 21; back >= 1; back--) {
+    for (let back = 30; back >= 1; back--) {
       const date = addDays(base, -back);
       const wd = weekday(date);
       if (wd === 0 || wd === 6) continue;
