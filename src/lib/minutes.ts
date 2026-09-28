@@ -1,4 +1,5 @@
 import { addDays, weekday } from "./dates";
+import { codeFor } from "./engine/cpt";
 import { allServices, encountersFor, getDistrict, getStudent, getUser, slotsForProvider } from "./repo";
 import { evaluate, type Evaluated } from "./status";
 import type { Discipline, Service, Student, User } from "./types";
@@ -27,9 +28,15 @@ export type MinutesReport = {
   totals: { mandated: number; delivered: number; billable: number; unloggedSessions: number; owed: number; blockedValue: number; billableValue: number };
 };
 
+export const ESTIMATE_MINUTES = 30;
+
 export function claimValue(e: Evaluated, rates: Record<string, number>): number {
-  if (!e.note.cpt) return 0;
-  return (rates[e.note.cpt] ?? 0) * e.note.units;
+  if (e.note.cpt) return (rates[e.note.cpt] ?? 0) * e.note.units;
+  if (e.note.attendance !== "present") return 0;
+  const discipline = getUser(e.provider_id)?.discipline;
+  if (!discipline) return 0;
+  const est = codeFor(discipline, e.note.setting, "present", ESTIMATE_MINUTES);
+  return est.cpt ? (rates[est.cpt] ?? 0) * est.units : 0;
 }
 
 export function weekReport(opts: { districtId: string; providerIds?: string[]; weekStart: string; today: string }): MinutesReport {
