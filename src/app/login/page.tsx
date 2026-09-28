@@ -26,10 +26,16 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <span className="grid size-7 place-items-center rounded-lg bg-brand text-white">S</span>
           Sessionside
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight">Every session you deliver, documented and claimable.</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Say it once. Sign a note Medicaid will accept.</h1>
         <p className="mt-3 text-ink-3">
-          Dictate for 30 seconds after a session. Sessionside drafts an IEP-aligned note, checks consent, orders, credentials, and minutes, and tells you what is blocking the claim before you sign.
+          For school speech, OT, and PT. Say what happened after the session, even for a group. Sessionside writes the IEP-aligned note for each student, checks it against your state&apos;s Medicaid rules, tracks IEP and make-up minutes, and exports to the systems you already use. You review and sign; nothing is claimed without you.
         </p>
+        <ul className="mt-4 space-y-1 text-sm text-ink-2">
+          <li>One dictation for a group, one note per student</li>
+          <li>State rule packs for Illinois, New York, Texas, and Michigan</li>
+          <li>Progress reports drafted from your own session data</li>
+          <li>No student audio, no training on student data</li>
+        </ul>
       </section>
       <section className="card w-full max-w-sm p-6">
         <form action={login} className="space-y-3">
