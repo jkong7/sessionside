@@ -129,6 +129,7 @@ export type Encounter = {
   signed_by: string | null;
   cosigned_at: string | null;
   cosigned_by: string | null;
+  group_key?: string | null;
   created_at: string;
   updated_at: string;
 };

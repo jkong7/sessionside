@@ -78,3 +78,20 @@ test("digest never names students", async ({ page }) => {
   const text = await page.locator("article").innerText();
   for (const n of ["Ava", "Morales", "Sofia", "Mateo", "Elijah", "Jayden", "Liam"]) expect(text).not.toContain(n);
 });
+
+test("one group dictation becomes a note per student", async ({ page }) => {
+  await login(page, "Maya Chen");
+  const ids = ["stu_elijah", "stu_jayden", "stu_liam"];
+  await page.goto(`/capture/group?students=${ids.join(",")}&scheduled=30`);
+  await page.getByRole("button", { name: "Liam Johnson" }).click();
+  await page.locator("textarea[name=transcript]").fill(
+    "30 minutes playing a turn-taking board game. Elijah kept the conversation topic for 3 turns 4 of 5 opportunities with minimal cues. Jayden kept the topic 2 of 5 turns with moderate cues.",
+  );
+  await page.getByRole("button", { name: /Draft 2 notes and log 1 absence/ }).click();
+  await page.waitForURL(/\/review\?group=/);
+  await expect(page.getByText(/drafted as 3 separate notes/)).toBeVisible();
+  await page.getByRole("link", { name: /Elijah Brown/ }).filter({ has: page.locator(".chip", { hasText: /^Group$/ }) }).first().click();
+  await expect(page.locator("input[name=group_size]")).toHaveValue("2");
+  await expect(page.locator("input[name=minutes]")).toHaveValue("30");
+  await expect(page.getByText("Code 92508")).toBeVisible();
+});

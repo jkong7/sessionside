@@ -9,7 +9,7 @@ import { evaluate, STATE_STYLE, type Evaluated } from "@/lib/status";
 
 const RANK = { blocked: 0, ready_to_sign: 1, awaiting_cosign: 2, not_billable: 3, billable: 4 };
 
-export default async function ReviewPage({ searchParams }: { searchParams: Promise<{ signed?: string; error?: string }> }) {
+export default async function ReviewPage({ searchParams }: { searchParams: Promise<{ signed?: string; error?: string; group?: string }> }) {
   const user = await requireUser();
   const sp = await searchParams;
   const drafts = encountersFor({ providerIds: [user.id], status: ["draft"] })
@@ -26,6 +26,7 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
         <h1 className="text-2xl font-semibold tracking-tight">Review & sign</h1>
         <p className="text-sm text-ink-3">Problems first. Nothing is signed or claimed without your attestation.</p>
       </header>
+      {sp.group && <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand">Group session drafted as {drafts.filter((d) => d.group_key === sp.group).length} separate notes, one per student. Review each below.</p>}
       {sp.signed && <p className="rounded-lg bg-ok-50 px-3 py-2 text-sm text-ok">Signed {sp.signed} clean note{sp.signed === "1" ? "" : "s"}.</p>}
       {sp.error === "attest" && <p className="rounded-lg bg-block-50 px-3 py-2 text-sm text-block">Check the attestation box to sign.</p>}
 
@@ -92,7 +93,10 @@ function Row({ e, clean }: { e: Evaluated; clean?: boolean }) {
         <p className="font-medium">
           {studentName(e.student_id)} <span className="text-sm font-normal text-ink-3">{formatDate(e.date)}{e.start ? ` ${e.start}` : ""}</span>
         </p>
-        <span className={`chip ${STATE_STYLE[e.state]}`}>{clean ? "Clean" : BILLABILITY_LABEL[e.state]}</span>
+        <span className="flex gap-1.5">
+          {e.group_key && <span className="chip bg-sunken text-ink-3">Group</span>}
+          <span className={`chip ${STATE_STYLE[e.state]}`}>{clean ? "Clean" : BILLABILITY_LABEL[e.state]}</span>
+        </span>
       </div>
       <p className="mt-1 truncate text-sm text-ink-3">{e.note.summary}</p>
       <div className="mt-2">

@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS encounters (
   signed_by TEXT,
   cosigned_at TEXT,
   cosigned_by TEXT,
+  group_key TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -161,7 +162,10 @@ export function openDb(file = dbPath()): DatabaseSync {
   return db;
 }
 
-const COLUMNS: [string, string, string][] = [["auth_sessions", "last_seen_at", "TEXT"]];
+const COLUMNS: [string, string, string][] = [
+  ["auth_sessions", "last_seen_at", "TEXT"],
+  ["encounters", "group_key", "TEXT"],
+];
 
 function migrate(database: DatabaseSync): void {
   for (const [table, column, type] of COLUMNS) {

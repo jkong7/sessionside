@@ -1,19 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { enqueue } from "@/lib/queue";
-
-type Recognition = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
+import { MicButton, useDictation } from "./useDictation";
 
 const ATTENDANCE = [
   { value: "present", label: "Delivered" },
@@ -31,53 +21,11 @@ export function CaptureForm(props: {
   setting: string;
   scheduledMinutes: number | null;
 }) {
-  const [text, setText] = useState("");
-  const [interim, setInterim] = useState("");
-  const [listening, setListening] = useState(false);
-  const [supported, setSupported] = useState(false);
+  const { text, setText, interim, listening, supported, toggle, stop } = useDictation();
   const [attendance, setAttendance] = useState("present");
   const [minutes, setMinutes] = useState("");
   const [pending, setPending] = useState(false);
-  const rec = useRef<Recognition | null>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
-    setSupported(Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition));
-  }, []);
-
-  function toggle() {
-    if (listening) {
-      rec.current?.stop();
-      return;
-    }
-    const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
-    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!Ctor) return;
-    const r = new Ctor();
-    r.continuous = true;
-    r.interimResults = true;
-    r.lang = "en-US";
-    r.onresult = (e) => {
-      let finalText = "";
-      let interimText = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const res = e.results[i];
-        if (res.isFinal) finalText += res[0].transcript;
-        else interimText += res[0].transcript;
-      }
-      if (finalText) setText((t) => (t ? `${t.trimEnd()} ${finalText.trim()}` : finalText.trim()).replace(/\s+([.,])/g, "$1"));
-      setInterim(interimText);
-    };
-    r.onend = () => {
-      setListening(false);
-      setInterim("");
-    };
-    r.onerror = () => setListening(false);
-    rec.current = r;
-    r.start();
-    setListening(true);
-  }
 
   const delivered = attendance === "present";
 
@@ -85,7 +33,7 @@ export function CaptureForm(props: {
     <form
       action={async (fd) => {
         setPending(true);
-        rec.current?.stop();
+        stop();
         if (!navigator.onLine) {
           enqueue({
             studentId: props.studentId,
@@ -126,16 +74,8 @@ export function CaptureForm(props: {
       {delivered && (
         <>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={toggle}
-              disabled={!supported}
-              className={`grid size-14 shrink-0 place-items-center rounded-full text-white transition ${listening ? "animate-pulse bg-block" : "bg-brand hover:bg-brand-600"} disabled:bg-ink-4`}
-              aria-label={listening ? "Stop dictation" : "Start dictation"}
-            >
-              {listening ? <span className="size-4 rounded-sm bg-white" /> : <span className="size-4 rounded-full bg-white" />}
-            </button>
-            <p className="text-sm text-ink-3">
+            <MicButton listening={listening} supported={supported} onClick={toggle} />
+            <p className="text-sm text-ink-3" aria-live="polite">
               {supported
                 ? listening
                   ? "Listening. Say minutes, what you worked on, data per goal, and the plan."

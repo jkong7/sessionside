@@ -139,12 +139,12 @@ export function encounterForSlot(providerId: string, studentId: string, date: st
   return r ? toEncounter(r) : null;
 }
 
-export function createEncounter(input: { studentId: string; providerId: string; date: string; start: string; transcript: string; note: Note }): Encounter {
+export function createEncounter(input: { studentId: string; providerId: string; date: string; start: string; transcript: string; note: Note; groupKey?: string | null }): Encounter {
   const id = uid("enc");
   const ts = now();
   db()
-    .prepare("INSERT INTO encounters (id, student_id, provider_id, date, start, transcript, note, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)")
-    .run(id, input.studentId, input.providerId, input.date, input.start, input.transcript, JSON.stringify(input.note), ts, ts);
+    .prepare("INSERT INTO encounters (id, student_id, provider_id, date, start, transcript, note, status, group_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)")
+    .run(id, input.studentId, input.providerId, input.date, input.start, input.transcript, JSON.stringify(input.note), input.groupKey ?? null, ts, ts);
   return getEncounter(id)!;
 }
 
@@ -159,6 +159,10 @@ export function markSigned(id: string, userId: string, status: EncounterStatus, 
 
 export function markCosigned(id: string, userId: string, at = now()): void {
   db().prepare("UPDATE encounters SET status = 'signed', cosigned_at = ?, cosigned_by = ?, updated_at = ? WHERE id = ?").run(at, userId, now(), id);
+}
+
+export function encountersInGroup(groupKey: string): Encounter[] {
+  return all<Row>("SELECT * FROM encounters WHERE group_key = ? ORDER BY created_at", groupKey).map(toEncounter);
 }
 
 export function deleteEncounter(id: string): void {

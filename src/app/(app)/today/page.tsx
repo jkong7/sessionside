@@ -14,6 +14,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     const enc = encounterForSlot(user.id, s.student_id, date, s.start);
     return { slot: s, enc: enc ? evaluate(enc) : null };
   });
+  const groups = new Map<string, typeof rows>();
+  for (const r of rows) if (r.slot.setting === "group") groups.set(r.slot.start, [...(groups.get(r.slot.start) ?? []), r]);
+  const groupStarts = [...groups.entries()].filter(([, g]) => g.length > 1 && g.some((r) => !r.enc));
   const unsigned = encountersFor({ providerIds: [user.id], status: ["draft"] }).map(evaluate);
   const blocked = unsigned.filter((e) => e.state === "blocked").length;
   const logged = rows.filter((r) => r.enc).length;
@@ -34,13 +37,35 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         </div>
       </header>
 
-      {sp.error && <p className="rounded-lg bg-block-50 px-3 py-2 text-sm text-block">That student is not on your caseload, or the date is in the future.</p>}
+      {sp.error && (
+        <p role="alert" className="rounded-lg bg-block-50 px-3 py-2 text-sm text-block">
+          {sp.error === "already-logged" ? "Those sessions were already logged." : sp.error === "future" ? "You cannot log a session in the future." : "That student is not on your caseload."}
+        </p>
+      )}
 
       <section className="grid gap-3 sm:grid-cols-3">
         <Stat label="Sessions logged" value={`${logged} of ${rows.length}`} />
         <Stat label="Notes waiting for your signature" value={String(unsigned.length)} href="/review" />
         <Stat label="Blocked from billing" value={String(blocked)} tone={blocked ? "block" : undefined} href="/review" />
       </section>
+
+      {groupStarts.map(([start, g]) => (
+        <section key={start} className="card flex flex-wrap items-center justify-between gap-3 border-brand-100 bg-brand-50/40 p-4">
+          <div className="flex items-center gap-4">
+            <span className="w-14 font-mono text-sm text-ink-3">{start}</span>
+            <div>
+              <p className="font-medium">Group: {g.map((r) => r.slot.first_name).join(", ")}</p>
+              <p className="text-xs text-ink-3">Dictate once, get a note for each student</p>
+            </div>
+          </div>
+          <Link
+            className="btn-primary"
+            href={`/capture/group?date=${date}&start=${start}&scheduled=${g[0].slot.minutes}&students=${g.filter((r) => !r.enc).map((r) => r.slot.student_id).join(",")}`}
+          >
+            Log group session
+          </Link>
+        </section>
+      ))}
 
       <section className="card divide-y divide-line">
         {rows.length === 0 && <p className="p-6 text-sm text-ink-3">No sessions scheduled. Use a make-up session below if you saw a student.</p>}
