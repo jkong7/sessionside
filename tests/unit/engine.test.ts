@@ -92,6 +92,7 @@ describe("draftLocal", () => {
     expect(note.goals.map((g) => g.goal_id).sort()).toEqual(["g1", "g2"]);
     expect(note.goals.find((g) => g.goal_id === "g1")).toMatchObject({ percent: 80, cue: "minimal verbal" });
     expect(note.goals.find((g) => g.goal_id === "g2")).toMatchObject({ percent: 60, cue: "moderate" });
+    expect(note.activities).toEqual(["Practiced initial r words with picture cards"]);
     expect(note.response).toContain("engaged");
     expect(note.plan).toContain("r blends");
     expect(note.uncertain).toEqual([]);

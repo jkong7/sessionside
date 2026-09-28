@@ -148,7 +148,10 @@ export function seed(database: DatabaseSync, base = todayFn()): void {
             wd = shared.weekday;
             start = shared.start;
           } else {
-            wd = 1 + ((i + k * 2) % 5);
+            const taken = slots.filter((x) => x.student === id && x.provider === userIds[sv.provider]).map((x) => x.weekday);
+            const options = [1, 2, 3, 4, 5].filter((d) => !taken.includes(d) && !taken.includes(d - 1) && !taken.includes(d + 1));
+            const pool = options.length ? options : [1, 2, 3, 4, 5].filter((d) => !taken.includes(d));
+            wd = pool.reduce((best, d) => (load[d] < load[best] ? d : best), pool[0]);
             load[wd] += 1;
             const hour = 8 + load[wd];
             start = `${String(hour).padStart(2, "0")}:${k % 2 ? "30" : "00"}`;

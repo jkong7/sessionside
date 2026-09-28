@@ -136,6 +136,10 @@ export function draftLocal(input: DraftInput): Note {
     const measure = extractMeasure(s);
     const hasData = measure.percent != null || measure.cue != null;
     const goal = matchGoal(s, disciplineGoals);
+    if (hasData && ACTIVITY.test(s)) {
+      const lead = s.split(/,|\b\d/)[0].trim().replace(/[.;:]$/, "");
+      if (lead.split(" ").length >= 3 && !activities.includes(lead)) activities.push(lead);
+    }
     if (goal && hasData) {
       const prev = byGoal.get(goal.id);
       if (!prev) {
