@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function login(page: Page, who: string) {
   await page.goto("/login");
   await page.getByRole("button", { name: new RegExp(who) }).click();
-  await page.waitForURL(/\/(today|minutes)/);
+  await page.waitForURL(/\/(today|overview)/);
 }
 
 test("therapist dictates, reviews, and signs a session", async ({ page }) => {
@@ -63,6 +63,9 @@ test("assistant note waits for supervisor co-sign", async ({ page, browser }) =>
 
 test("coordinator sees district minutes and exports claims", async ({ page }) => {
   await login(page, "Dana Whitfield");
+  await expect(page.getByRole("heading", { name: "District overview" })).toBeVisible();
+  await expect(page.getByText("Claim capture rate")).toBeVisible();
+  await page.goto("/minutes");
   await expect(page.getByRole("heading", { name: "IEP minutes" })).toBeVisible();
   await expect(page.getByText("Sessions never logged")).toBeVisible();
   const res = await page.request.get("/api/claims");

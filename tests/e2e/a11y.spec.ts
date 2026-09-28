@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function login(page: Page, who: string) {
   await page.goto("/login");
   await page.getByRole("button", { name: new RegExp(who) }).click();
-  await page.waitForURL(/\/(today|minutes)/);
+  await page.waitForURL(/\/(today|overview)/);
 }
 
 async function scan(page: Page) {
@@ -37,7 +37,7 @@ test("note review meets WCAG 2.1 AA", async ({ page }) => {
   expect(await scan(page)).toEqual([]);
 });
 
-for (const path of ["/settings", "/claims/binder", "/students/stu_ava", "/imports"]) {
+for (const path of ["/overview", "/settings", "/claims/binder", "/students/stu_ava", "/imports"]) {
   test(`coordinator ${path} meets WCAG 2.1 AA`, async ({ page }) => {
     await login(page, "Dana Whitfield");
     await page.goto(path);

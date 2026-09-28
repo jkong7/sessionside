@@ -13,7 +13,7 @@ async function login(formData: FormData) {
   "use server";
   const result = await signIn(String(formData.get("email") ?? ""), String(formData.get("password") ?? ""));
   if ("error" in result) redirect(`/login?error=${result.error}`);
-  redirect(result.user.role === "coordinator" ? "/minutes" : "/today");
+  redirect(result.user.role === "coordinator" ? "/overview" : "/today");
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

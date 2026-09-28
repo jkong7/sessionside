@@ -16,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const items: NavItem[] =
     user.role === "coordinator"
       ? [
+          { href: "/overview", label: "Overview" },
           { href: "/minutes", label: "IEP minutes" },
           { href: "/claims", label: "Claims" },
           { href: "/exports", label: "Exports" },
