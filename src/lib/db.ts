@@ -1,6 +1,9 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { seed } from "./seed";
+
+export { now, uid } from "./ids";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS districts (
@@ -126,18 +129,15 @@ export function openDb(file = dbPath()): DatabaseSync {
 }
 
 export function db(): DatabaseSync {
-  if (!g.__sessionsideDb) g.__sessionsideDb = openDb();
+  if (!g.__sessionsideDb) {
+    const instance = openDb();
+    const row = instance.prepare("SELECT COUNT(*) AS n FROM districts").get() as { n: number };
+    if (row.n === 0 && process.env.SESSIONSIDE_SEED !== "0") seed(instance);
+    g.__sessionsideDb = instance;
+  }
   return g.__sessionsideDb;
 }
 
 export function setDb(instance: DatabaseSync): void {
   g.__sessionsideDb = instance;
-}
-
-export function uid(prefix: string): string {
-  return `${prefix}_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-}
-
-export function now(): string {
-  return new Date().toISOString();
 }
